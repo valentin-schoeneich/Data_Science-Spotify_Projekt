@@ -88,7 +88,7 @@ df_soul = df_soul.drop(['artist_name', 'track_name', 'duration_ms'], axis=1)
 print('df_soul')
 print(df_soul)
 
-df_playlists.to_csv('playlists.csv', index=False)
+df_playlists.to_csv('playlists.csv', index=False)   # append with , mode='a',
 df_artist.to_csv('artist.csv', index=False)
 df_tracks.to_csv('tracks.csv', index=False)
 df_album.to_csv('album.csv', index=False)
