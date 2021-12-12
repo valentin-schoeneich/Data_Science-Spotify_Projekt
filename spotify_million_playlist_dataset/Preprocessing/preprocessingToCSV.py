@@ -8,8 +8,8 @@ pd.set_option('display.max_columns', 20)
 pd.set_option('display.width', 400)
 
 path = '../../../../Data-Science-Spotify/spotify_million_playlist_dataset/data/'
-quick = False
-max_files_for_quick_processing = 5
+quick = True
+max_files_for_quick_processing = 1
 df_playlists = pd.DataFrame({'name': [], 'collaborative': [], 'pid': [], 'modified_at': [], 'num_albums': [],
                              'num_tracks': [], 'num_followers': [], 'num_edits': [], 'duration_ms': [],
                              'num_artists': []})
@@ -57,32 +57,28 @@ def process_mpd():
             track_uri = df_soul['track_uri']
             track_name = df_soul['track_name']
             duration_ms = df_soul['duration_ms']
-            df_tracks['track_uri'] = track_uri
-            df_tracks['track_name'] = track_name
-            df_tracks['duration_ms'] = duration_ms
-            #df_tracks = df_tracks.drop_duplicates()
+            df_tracks = pd.concat([track_uri, track_name, duration_ms], axis=1)
+            df_tracks = df_tracks.drop_duplicates('track_uri')
 
             album_uri = df_soul['album_uri']
             album_name = df_soul['album_name']
-            df_album['album_uri'] = album_uri
-            df_album['album_name'] = album_name
-            #df_album = df_album.drop_duplicates()
+            df_album = pd.concat([album_uri, album_name], axis=1)
+            df_album = df_album.drop_duplicates('album_uri')
 
             artist_uri = df_soul['artist_uri']
             artist_name = df_soul['artist_name']
-            df_artist['artist_uri'] = artist_uri
-            df_artist['artist_name'] = artist_name
-            #df_artist = df_artist.drop_duplicates()
+            df_artist = pd.concat([artist_uri, artist_name], axis=1)
+            df_artist = df_artist.drop_duplicates('artist_uri')
 
-            #df_soul = df_soul.drop(['artist_name', 'track_name', 'duration_ms'], axis=1)
+            #df_soul = df_soul.drop(['artist_name', 'track_name', 'duration_ms', 'album_name'], axis=1)
 
             if count > 0:
                 setHeader = False
 
             #df_playlists.to_csv('playlists.csv', mode='a', index=False, header=setHeader)  # append with mode='a', header=False
-            df_artist.to_csv('artist_all.csv', mode='a', index=False, header=setHeader)
-            df_tracks.to_csv('tracks_all.csv', mode='a', index=False, header=setHeader)
-            df_album.to_csv('album_all.csv', mode='a', index=False, header=setHeader)
+            df_artist.to_csv('artist_slice.csv', mode='a', index=False, header=setHeader)
+            df_tracks.to_csv('tracks_slice.csv', mode='a', index=False, header=setHeader)
+            df_album.to_csv('album_slice.csv', mode='a', index=False, header=setHeader)
             #df_soul.to_csv('soul.csv', mode='a', index=False, header=setHeader)
 
             print(count, ", ", filename)
