@@ -4,11 +4,9 @@ import os
 import pandas as pd
 import re
 
-pd.set_option('display.max_columns', 20)
-pd.set_option('display.width', 400)
 
 path = '../../../../Data-Science-Spotify/spotify_million_playlist_dataset/data/'
-quick = True
+quick = False
 max_files_for_quick_processing = 1
 df_playlists = pd.DataFrame({'name': [], 'collaborative': [], 'pid': [], 'modified_at': [], 'num_albums': [],
                              'num_tracks': [], 'num_followers': [], 'num_edits': [], 'duration_ms': [],
@@ -38,11 +36,11 @@ def process_mpd():
             f.close()
             data = json.loads(js)
 
-            # df_playlists = pd.json_normalize(
-            #     data,
-            #     record_path=['playlists'],
-            #     max_level=1
-            # )
+            df_playlists = pd.json_normalize(
+                data,
+                record_path=['playlists'],
+                max_level=1
+            )
 
             df_soul = pd.json_normalize(
                 data['playlists'],
@@ -52,7 +50,7 @@ def process_mpd():
                 ]
             )
 
-            #df_playlists = df_playlists.drop(['tracks', 'description'], axis=1)
+            df_playlists = df_playlists.drop(['tracks', 'description'], axis=1)
 
             track_uri = df_soul['track_uri']
             track_name = df_soul['track_name']
@@ -70,16 +68,16 @@ def process_mpd():
             df_artist = pd.concat([artist_uri, artist_name], axis=1)
             df_artist = df_artist.drop_duplicates('artist_uri')
 
-            #df_soul = df_soul.drop(['artist_name', 'track_name', 'duration_ms', 'album_name'], axis=1)
+            df_soul = df_soul.drop(['artist_name', 'track_name', 'duration_ms', 'album_name'], axis=1)
 
             if count > 0:
                 setHeader = False
 
-            #df_playlists.to_csv('playlists.csv', mode='a', index=False, header=setHeader)  # append with mode='a', header=False
-            df_artist.to_csv('artist_slice.csv', mode='a', index=False, header=setHeader)
-            df_tracks.to_csv('tracks_slice.csv', mode='a', index=False, header=setHeader)
-            df_album.to_csv('album_slice.csv', mode='a', index=False, header=setHeader)
-            #df_soul.to_csv('soul.csv', mode='a', index=False, header=setHeader)
+            df_playlists.to_csv('playlists.csv', mode='a', index=False, header=setHeader)  # append with mode='a', header=False
+            df_artist.to_csv('artists.csv', mode='a', index=False, header=setHeader)
+            df_tracks.to_csv('tracks.csv', mode='a', index=False, header=setHeader)
+            df_album.to_csv('albums.csv', mode='a', index=False, header=setHeader)
+            df_soul.to_csv('soul.csv', mode='a', index=False, header=setHeader)
 
             print(count, ", ", filename)
 
