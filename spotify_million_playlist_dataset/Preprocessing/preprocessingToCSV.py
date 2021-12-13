@@ -6,8 +6,8 @@ import re
 
 
 path = '../../../../Data-Science-Spotify/spotify_million_playlist_dataset/data/'
-quick = True
-max_files_for_quick_processing = 0
+quick = False
+max_files_for_quick_processing = 1
 df_playlists = pd.DataFrame({'name': [], 'collaborative': [], 'pid': [], 'modified_at': [], 'num_albums': [],
                              'num_tracks': [], 'num_followers': [], 'num_edits': [], 'duration_ms': [],
                              'num_artists': []})
@@ -50,7 +50,7 @@ def process_mpd():
                 ]
             )
 
-            df_playlists = df_playlists.drop(['tracks'], axis=1)
+            df_playlists = df_playlists.drop(['tracks', 'description'], axis=1)
 
             track_uri = df_soul['track_uri']
             track_name = df_soul['track_name']
@@ -73,11 +73,11 @@ def process_mpd():
             if count > 0:
                 setHeader = False
 
-            df_playlists.to_csv('playlists_1.csv', mode='a', index=False, header=setHeader)  # append with mode='a', header=False
-            df_artist.to_csv('artists_1.csv', mode='a', index=False, header=setHeader)
-            df_tracks.to_csv('tracks_1.csv', mode='a', index=False, header=setHeader)
-            df_album.to_csv('albums_1.csv', mode='a', index=False, header=setHeader)
-            df_soul.to_csv('soul_1.csv', mode='a', index=False, header=setHeader)
+            df_playlists.to_csv('playlists.csv', mode='a', index=False, header=setHeader)  # append with mode='a', header=False
+            df_artist.to_csv('artists.csv', mode='a', index=False, header=setHeader)
+            df_tracks.to_csv('tracks.csv', mode='a', index=False, header=setHeader)
+            df_album.to_csv('albums.csv', mode='a', index=False, header=setHeader)
+            df_soul.to_csv('soul.csv', mode='a', index=False, header=setHeader)
 
             print(count, ", ", filename)
 
