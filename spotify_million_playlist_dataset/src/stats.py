@@ -30,7 +30,7 @@ playlist_length_histogram = collections.Counter()
 num_followers_histogram = collections.Counter()
 
 quick = True
-max_files_for_quick_processing = 1
+max_files_for_quick_processing = 0
 
 
 def process_mpd(path):
