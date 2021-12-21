@@ -4,15 +4,14 @@ import os
 import pandas as pd
 import re
 
-
-path = '../../../../Data-Science-Spotify/spotify_million_playlist_dataset/data/'
+path = '../data/'
 quick = False
-max_files_for_quick_processing = 1
+max_files = 1
 df_playlists = pd.DataFrame({'name': [], 'collaborative': [], 'pid': [], 'modified_at': [], 'num_albums': [],
                              'num_tracks': [], 'num_followers': [], 'num_edits': [], 'duration_ms': [],
                              'num_artists': []})
-df_soul = pd.DataFrame({'track_uri': [], 'artist_uri': [], 'album_uri': [], 'pos': [], 'pid': []})
-df_tracks = pd.DataFrame({'track_uri': [], 'track_name': [], 'duration_ms': []})
+df_pConT = pd.DataFrame({'pos': [], 'track_uri': [], 'pid': [], 'description': []})
+df_tracks = pd.DataFrame({'track_uri': [], 'track_name': [], 'duration_ms': [], 'artist_uri': [], 'album_uri': []})
 df_album = pd.DataFrame({'album_uri': [], 'album_name': []})
 df_artist = pd.DataFrame({'artist_uri': [], 'artist_name': []})
 setHeader = True
@@ -21,15 +20,29 @@ setHeader = True
 def atoi(text):
     return int(text) if text.isdigit() else text
 
+
 def natural_keys(text):
-    return [ atoi(c) for c in re.split(r'(\d+)', text) ]
+    return [atoi(c) for c in re.split(r'(\d+)', text)]
+
+
+def getCounter():
+    return f'{"_"}{str(max_files + 1)}' if quick else "_1000"
+
+
+def makeCSVUnique(filename):
+    print('dropping duplicates in ' + filename)
+    df = pd.read_csv(f'{filename}{getCounter()}{".csv"}')
+    df = df.drop_duplicates()
+    df.to_csv(f'{filename}{getCounter()}{".csv"}')
+
 
 def process_mpd():
-    global df_playlists, df_soul, df_tracks, df_album, df_artist, setHeader
+    global df_playlists, df_pConT, df_tracks, df_album, df_artist, setHeader
     count = 0
     filenames = os.listdir(path)
     for filename in sorted(filenames, key=natural_keys):
         if filename.startswith('mpd.slice.') and filename.endswith(".json"):
+            # read json-File
             fullpath = os.sep.join((path, filename))
             f = open(fullpath)
             js = f.read()
@@ -42,7 +55,7 @@ def process_mpd():
                 max_level=1
             )
 
-            df_soul = pd.json_normalize(
+            df_pConT = pd.json_normalize(
                 data['playlists'],
                 record_path=['tracks'],
                 meta=[
@@ -50,46 +63,50 @@ def process_mpd():
                 ]
             )
 
-            df_playlists = df_playlists.drop(['tracks', 'description'], axis=1)
+            df_playlists = df_playlists.drop(['tracks'], axis=1)
 
-            track_uri = df_soul['track_uri']
-            track_name = df_soul['track_name']
-            duration_ms = df_soul['duration_ms']
-            df_tracks = pd.concat([track_uri, track_name, duration_ms], axis=1)
+            track_uri = df_pConT['track_uri']
+            album_uri = df_pConT['album_uri']
+            artist_uri = df_pConT['artist_uri']
+            track_name = df_pConT['track_name']
+            duration_ms = df_pConT['duration_ms']
+            df_tracks = pd.concat([track_uri, track_name, duration_ms, album_uri, artist_uri], axis=1)
             df_tracks = df_tracks.drop_duplicates('track_uri')
 
-            album_uri = df_soul['album_uri']
-            album_name = df_soul['album_name']
+            album_name = df_pConT['album_name']
             df_album = pd.concat([album_uri, album_name], axis=1)
             df_album = df_album.drop_duplicates('album_uri')
 
-            artist_uri = df_soul['artist_uri']
-            artist_name = df_soul['artist_name']
+            artist_name = df_pConT['artist_name']
             df_artist = pd.concat([artist_uri, artist_name], axis=1)
             df_artist = df_artist.drop_duplicates('artist_uri')
 
-            df_soul = df_soul.drop(['artist_name', 'track_name', 'duration_ms', 'album_name'], axis=1)
+            df_pConT = df_pConT.drop(['artist_name', 'track_name', 'duration_ms',
+                                      'album_name', 'album_uri', 'artist_uri'], axis=1)
 
             if count > 0:
                 setHeader = False
 
-            df_playlists.to_csv('playlists.csv', mode='a', index=False, header=setHeader)  # append with mode='a', header=False
-            df_artist.to_csv('artists.csv', mode='a', index=False, header=setHeader)
-            df_tracks.to_csv('tracks.csv', mode='a', index=False, header=setHeader)
-            df_album.to_csv('albums.csv', mode='a', index=False, header=setHeader)
-            df_soul.to_csv('soul.csv', mode='a', index=False, header=setHeader)
+            df_playlists.to_csv(f'{"playlists"}{getCounter()}{".csv"}'
+                                , mode='a', index=False, header=setHeader)  # append with mode='a', header=False
+            df_artist.to_csv(f'{"artists"}{getCounter()}{".csv"}'
+                             , mode='a', index=False, header=setHeader)
+            df_tracks.to_csv(f'{"tracks"}{getCounter()}{".csv"}'
+                             , mode='a', index=False, header=setHeader)
+            df_album.to_csv(f'{"albums"}{getCounter()}{".csv"}'
+                            , mode='a', index=False, header=setHeader)
+            df_pConT.to_csv(f'{"pConT"}{getCounter()}{".csv"}'
+                            , mode='a', index=False, header=setHeader)
 
             print(count, ", ", filename)
 
             count += 1
 
-            if quick and count > max_files_for_quick_processing:
+            if quick and count > max_files:
                 break
 
+
 process_mpd()
-
-
-
-
-
-
+makeCSVUnique('albums')
+makeCSVUnique('tracks')
+makeCSVUnique('artists')
