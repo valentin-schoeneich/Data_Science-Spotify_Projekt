@@ -4,13 +4,14 @@ import os
 import pandas as pd
 import re
 
-path = '../data/'
-quick = False
+path = '../../../../Data-Science-Spotify/spotify_million_playlist_dataset/data/'
+#path = '../data/'
+quick = True
 max_files = 1
 df_playlists = pd.DataFrame({'name': [], 'collaborative': [], 'pid': [], 'modified_at': [], 'num_albums': [],
                              'num_tracks': [], 'num_followers': [], 'num_edits': [], 'duration_ms': [],
-                             'num_artists': []})
-df_pConT = pd.DataFrame({'pos': [], 'track_uri': [], 'pid': [], 'description': []})
+                             'num_artists': [], 'description': []})
+df_pConT = pd.DataFrame({'pos': [], 'track_uri': [], 'pid': []})
 df_tracks = pd.DataFrame({'track_uri': [], 'track_name': [], 'duration_ms': [], 'artist_uri': [], 'album_uri': []})
 df_album = pd.DataFrame({'album_uri': [], 'album_name': []})
 df_artist = pd.DataFrame({'artist_uri': [], 'artist_name': []})
@@ -33,7 +34,11 @@ def makeCSVUnique(filename):
     print('dropping duplicates in ' + filename)
     df = pd.read_csv(f'{filename}{getCounter()}{".csv"}')
     df = df.drop_duplicates()
-    df.to_csv(f'{filename}{getCounter()}{".csv"}')
+    df.to_csv(f'{filename}{getCounter()}{".csv"}', index=False)
+
+def mk_index(filename):
+    df = pd.read_csv(f'{filename}{getCounter()}{".csv"}')
+    df.to_csv(f'{filename}{getCounter()}{".csv"}', index=True)
 
 
 def process_mpd():
@@ -70,7 +75,7 @@ def process_mpd():
             artist_uri = df_pConT['artist_uri']
             track_name = df_pConT['track_name']
             duration_ms = df_pConT['duration_ms']
-            df_tracks = pd.concat([track_uri, track_name, duration_ms, album_uri, artist_uri], axis=1)
+            df_tracks = pd.concat([track_uri, track_name, duration_ms, artist_uri, album_uri], axis=1)
             df_tracks = df_tracks.drop_duplicates('track_uri')
 
             album_name = df_pConT['album_name']
@@ -110,3 +115,4 @@ process_mpd()
 makeCSVUnique('albums')
 makeCSVUnique('tracks')
 makeCSVUnique('artists')
+mk_index('pConT')
