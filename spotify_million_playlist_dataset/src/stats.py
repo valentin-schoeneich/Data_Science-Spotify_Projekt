@@ -29,8 +29,8 @@ num_edits_histogram = collections.Counter()
 playlist_length_histogram = collections.Counter()
 num_followers_histogram = collections.Counter()
 
-quick = False
-max_files_for_quick_processing = 5
+quick = True
+max_files_for_quick_processing = 1
 
 
 def process_mpd(path):
