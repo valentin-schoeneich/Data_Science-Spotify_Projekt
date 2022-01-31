@@ -6,19 +6,40 @@ from dbconnect import *
 
 # load variable number of playlists from our database and return a list of playlists
 # and a set of all tracks
+
+# def getFromDB(maxPlaylists):
+#     playlists = []
+#     unique_tracks = set()
+#
+#     for i in range(0, maxPlaylists):
+#         tracks = dbReq(f'{"select track_uri from pcont where pid="}{i}')
+#         record = set()
+#         for track in tracks:
+#             record.add(track)
+#         for item in record:
+#             unique_tracks.add(frozenset([item]))
+#         playlists.append(record)
+#     return unique_tracks, playlists
+
 def getFromDB(maxPlaylists):
+    maxPlaylists -= 1
     playlists = []
     unique_tracks = set()
+    playlistCounter = 0
+    record = set()
 
-    for i in range(0, maxPlaylists):
-        tracks = dbReq(f'{"select track_uri from pcont where pid="}{i}')
-        record = set()
-        for track in tracks:
-            record.add(track)
-        for item in record:
-            unique_tracks.add(frozenset([item]))
-        playlists.append(record)
+    tracks = dbReq(f'{"select track_uri, pid from pcont where pid<="}{maxPlaylists}')
+    for track in tracks:
+        if playlistCounter != track[1]:
+            playlistCounter += 1
+            playlists.append(record)
+            record.clear()
+        track_uri = tuple([track[0]])
+        record.add(track_uri)
+        unique_tracks.add(frozenset([track_uri]))
+    playlists.append(record)
     return unique_tracks, playlists
+
 
 
 # likelihood of a track being included in a playlist
@@ -33,7 +54,6 @@ def getAboveMinSup(unique_tracks, playlists, minSup, globalTrackSetWithSup):
             if track.issubset(playlistSet):
                 globalTrackSetWithSup[track] += 1
                 localTrackSetWithSup[track] += 1
-
     for track, supCount in localTrackSetWithSup.items():
         support = float(supCount / len(playlists))
         if(support >= minSup):
@@ -82,8 +102,16 @@ def associationRule(freqItemSet, itemSetWithSup, minConf):
 
 def aprioriFromDB(numberPlaylists, minSup = 0.5, minConf = 0.5):
     unique_tracks, playlists = getFromDB(numberPlaylists)
-    #print(unique_tracks)
-    #print(playlists)
+    # i = 0
+    # for playlist in playlists:
+    #     print(i, " ", playlist)
+    #     i += 1
+    # i = 0
+    # for unique_track in unique_tracks:
+    #     print(i, " ", unique_track)
+    #     i += 1
+    # print(unique_tracks)
+    # print(playlists)
 
     # Final result global frequent itemset
     globalFreqTrackSet = dict()
@@ -116,6 +144,6 @@ def aprioriFromDB(numberPlaylists, minSup = 0.5, minConf = 0.5):
 
 
 
-globalFreqTrackSet, rules = aprioriFromDB(20, 0.1, 0.5)
+globalFreqTrackSet, rules = aprioriFromDB(2, 0.1, 0.5)
 print(globalFreqTrackSet)
 print(rules)
