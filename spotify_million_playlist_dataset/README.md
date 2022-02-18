@@ -55,7 +55,7 @@ Each slice file is a JSON dictionary with two fields:
 ### `info` Field
 The info field is a dictionary that contains general information about the particular slice:
 
-   * **slice** - the range of slices that in in this particular file - such as 0-999
+   * **slice** - the range of slices that in in this particular file - such as 0-999 
    * ***version*** -  - the current version of the MPD (which should be v1)
    * ***description*** - a description of the MPD
    * ***license*** - licensing info for the MPD
