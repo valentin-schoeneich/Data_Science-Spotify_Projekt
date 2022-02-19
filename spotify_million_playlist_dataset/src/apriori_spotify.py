@@ -195,5 +195,5 @@ def saveAndSortRules(rules, filename):
 
 
 # aprioriSpotify('track_uri', maxPid=2000, minSup=5)
-# aprioriPname('artist_uri', 1000000, minConf=0.2)
-aprioriSpotify('track_uri', 2000, p=-1, minSup=10, dbL1ItemSets=False)
+aprioriPname('track_uri', 1000000, minConf=0.2)
+#aprioriSpotify('track_uri', 2000, p=-1, minSup=10, dbL1ItemSets=False)

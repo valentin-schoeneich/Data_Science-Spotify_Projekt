@@ -1,5 +1,5 @@
-from helperMethods import validItems, natural_keys, makeCSVUnique, createIndexForCSV, checkParamItems, append, \
-    normalize_name, checkParamItem, saveDF2CSV, createDfsForDb, getDataFromJson, getJsonFiles, readDF_from_CSV, \
+from helperMethods import natural_keys, makeCSVUnique, createIndexForCSV, checkParamItems, append, \
+    normalize_name, saveDF2CSV, createDfsForDb, getDataFromJson, getJsonFiles, readDF_from_CSV, \
     getL1ItemSet2ValuesFromCSV, getSup
 import pandas as pd
 
