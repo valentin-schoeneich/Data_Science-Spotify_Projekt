@@ -4,17 +4,18 @@ import pandas as pd
 
 def ruleDict(filename):
     df = readDF_from_CSV(filename, path='../data_rules/')
-    df_new = pd.DataFrame(columns=["antecedent", "rule"])
-    df_new['antecedent'] = df['antecedent']
-    df_new['rule'] = str(df['consequent']) + ", " + str(df['consequent'])
-    print(df_new['rule'])
-    '''
-    {las chidas: [[spotify:track:3YKptz29AsOlm7WAVnztBh, 0.25], [spotify:track:3YKptz29AsOlm7WAVnztBh, 0.25], ...]
-    ....
-    }
-    '''
-    #df_new = df.groupby('antecedent')['consequent'].apply(list).reset_index(name='consequents')
-    #return {row['antecedent']: row['consequents'] for index, row in df.iterrows()}
+    df['rule'] = df[['consequent', 'confidence']].values.tolist()
+    df_new = df.groupby('antecedent')['rule'].apply(list).reset_index(name='rules')
+    return {row['antecedent']: row['rules'] for index, row in df_new.iterrows()}
+
+
+def predict(dict, key):
+    try:
+        consequents = dict[key]
+    except:
+        return {}
+
+    return {consequent[0] for consequent in consequents}
 
 
 def recommendation():
@@ -32,22 +33,10 @@ def recommendation():
         szenario = checkSzenario(playlist)
         predictions = set()
         if szenario == 1 or szenario == 2:
-            try:
-                consequents = pname2track_uri[normalize_name(playlist['name'])]
-            except:
-                consequents = {}
+            predictions.update(predict(pname2track_uri, normalize_name(playlist['name'])))
 
-            for consequent in consequents:
-                predictions.add(consequent)
-
-            for track in playlist['tracks']:
-                try:
-                    consequents = track_uri2track_uri[track['track_uri']]
-                except:
-                    print(track['track_uri'])
-
-            for consequent in consequents:
-                predictions.add(consequent)
+            for track in playlist['tacks']:
+                predictions.update(predict(track_uri2track_uri, track['track_uri']))
 
             if len(predictions) == 0:
                 emptys += 1
@@ -96,7 +85,4 @@ def checkSzenario(playlist):
     return -1
 
 
-#recommendation()
-ruleDict('1000_name2track_uri_conf20.csv')
-
-
+recommendation()
