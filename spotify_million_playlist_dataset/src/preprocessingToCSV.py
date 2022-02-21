@@ -24,7 +24,7 @@ def csvForDb(maxFiles):
         i += 1
 
     makeCSVUnique(f'albums_{maxFiles}')
-    makeCSVUnique('tracks_{maxFiles}')
+    makeCSVUnique(f'tracks_{maxFiles}')
     makeCSVUnique(f'artists_{maxFiles}')
     createIndexForCSV(f'pConT_{maxFiles}')
 
@@ -55,7 +55,7 @@ def csvItem2Values(maxFiles, keys, values='pid', minSup=1):
                     spotify:album:0005lpYtyKk9B3e0mWjdem,{'697783'}
                     ...
     """
-    keys = checkParamItems("csvItem2Pids", keys)
+    keys = checkParamItems("csvItem2Values", keys)
     values = checkParamItems("csvItem2Values", values)
     formattedValues = set()
     for value in values:
@@ -177,13 +177,12 @@ def createFiles():
     """
     # For testing
     csvItem2Values(2, 'name', {'track_uri', 'album_uri', 'artist_uri', 'pid'})
-    csvItem2Values(2, {'track_uri', 'album_uri', 'artist_uri', 'name'}, 'pid')
+    csvItem2Values(2, {'track_uri', 'album_uri', 'artist_uri'}, 'pid')
     csvItem2Values(2, {'album_uri', 'artist_uri'}, 'track_uri')
     # For final prediction / rule-calculation
     csvItem2Values(1000, 'name', {'track_uri', 'album_uri', 'artist_uri', 'pid'})
-    csvItem2Values(1000, {'track_uri', 'album_uri', 'artist_uri', 'name'}, 'pid')
+    csvItem2Values(1000, {'track_uri', 'album_uri', 'artist_uri'}, 'pid')
     csvItem2Values(1000, {'album_uri', 'artist_uri'}, 'track_uri')
     savePopularTracks()
-
 
 

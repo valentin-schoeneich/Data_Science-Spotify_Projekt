@@ -22,13 +22,15 @@ def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1
     allRules = list()
     checkParamItem('aprioriSpotify', item)
     if dbL1ItemSets:    # get l1ItemSets from db
-        numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        #numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        numUniqueItems = 1
         l1Pid2ItemSets = getL1Pid2ItemSets(item, maxPid, minSup)
         l1ItemSet2Pids = getL1ItemSet2Pids(item, maxPid, minSup)
     else:   # get l1ItemSets from csv-file
         maxFiles = (maxPid - 1) // 1000 + 1
         maxPid = maxFiles * 1000
-        numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        #numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        numUniqueItems = 1
         l1ItemSet2Pids = getL1ItemSet2ValuesFromCSV(item=item, minSup=minSup, maxFiles=maxFiles)
         l1Pid2ItemSets = getL1Pid2ItemSetsFromDict(l1ItemSet2Pids)  # this one is faster
 
@@ -195,5 +197,8 @@ def saveAndSortRules(rules, filename):
 
 
 # aprioriSpotify('track_uri', maxPid=2000, minSup=5)
-aprioriPname('track_uri', 1000000, minConf=0.2)
-#aprioriSpotify('track_uri', 2000, p=-1, minSup=10, dbL1ItemSets=False)
+#aprioriPname('track_uri', 1000000, minConf=0.2)
+
+#aprioriSpotify('track_uri', 1000000, minConf=0.2, dbL1ItemSets=False)
+#aprioriSpotify('artist_uri', 1000000, minConf=0.2, dbL1ItemSets=False)
+aprioriSpotify('album_uri', 1000000, minConf=0.2, dbL1ItemSets=False)
