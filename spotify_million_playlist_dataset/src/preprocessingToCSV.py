@@ -24,7 +24,7 @@ def csvForDb(maxFiles):
         i += 1
 
     makeCSVUnique(f'albums_{maxFiles}')
-    makeCSVUnique('tracks_{maxFiles}')
+    makeCSVUnique(f'tracks_{maxFiles}')
     makeCSVUnique(f'artists_{maxFiles}')
     createIndexForCSV(f'pConT_{maxFiles}')
 
@@ -55,7 +55,7 @@ def csvItem2Values(maxFiles, keys, values='pid', minSup=1):
                     spotify:album:0005lpYtyKk9B3e0mWjdem,{'697783'}
                     ...
     """
-    keys = checkParamItems("csvItem2Pids", keys)
+    keys = checkParamItems("csvItem2Values", keys)
     values = checkParamItems("csvItem2Values", values)
     formattedValues = set()
     for value in values:
@@ -90,6 +90,7 @@ def csvItem2Values(maxFiles, keys, values='pid', minSup=1):
             print(item, "-> oldlen: ", oldLen, "newlen:", len(df[item]))
 
 
+'''
 def csvPid2ItemsFromCSV(maxFiles, items):
     """
     This method is not very useful, because it is faster the generate the pid2ItemsDict with the method
@@ -123,6 +124,7 @@ def csvPid2ItemsFromCSV(maxFiles, items):
         df_pid2Items['pid'] = pid2Items.keys()
         df_pid2Items['items'] = pid2Items.values()
         saveDF2CSV(df_pid2Items, f'pid2{item}s_{maxFiles}.csv')
+'''
 
 
 def savePopularTracks(maxFiles):
@@ -177,13 +179,13 @@ def createFiles():
     """
     # For testing
     csvItem2Values(2, 'name', {'track_uri', 'album_uri', 'artist_uri', 'pid'})
-    csvItem2Values(2, {'track_uri', 'album_uri', 'artist_uri', 'name'}, 'pid')
+    csvItem2Values(2, {'track_uri', 'album_uri', 'artist_uri'}, 'pid')
     csvItem2Values(2, {'album_uri', 'artist_uri'}, 'track_uri')
     # For final prediction / rule-calculation
     csvItem2Values(1000, 'name', {'track_uri', 'album_uri', 'artist_uri', 'pid'})
-    csvItem2Values(1000, {'track_uri', 'album_uri', 'artist_uri', 'name'}, 'pid')
+    csvItem2Values(1000, {'track_uri', 'album_uri', 'artist_uri'}, 'pid')
     csvItem2Values(1000, {'album_uri', 'artist_uri'}, 'track_uri')
-    savePopularTracks()
+    savePopularTracks(1000)
 
 
 

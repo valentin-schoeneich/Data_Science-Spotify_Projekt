@@ -92,8 +92,9 @@ def aprioriFromDB(maxPlaylists, minSup, minConf=0.5, kMax=2):
     Main method of this file.
     :param maxPlaylists: Defines the load of data requested from our database
     :param minSup:  Percentage of minimum playlists a track have to appear in, that he is used for rule-calculation
-    :param minConf: Rates the rule. If the rule A -> B has the confidence 0.5, it means that B appears in 50% of
-                    playlists, A appears in
+    :param minConf: Likelihood of consequent given antecedent that rates the rule.
+                    If the rule A -> B has the confidence 0.5, it means that B appears in 50% of playlists
+                    where A appears in.
     :param kMax:    Limits the iterations of this method by the size of the track-sets.
                     If kMax = 2, a rule could look like:
                     [{'spotify:track:3H1LCvO3fVsK2HPguhbml0'}, {'spotify:track:0XUfyU2QviPAs6bxSpXYG4'}, 1.0]

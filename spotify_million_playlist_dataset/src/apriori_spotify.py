@@ -7,28 +7,44 @@ from progressBar import ProgressBar
 
 def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1ItemSets=False):
     """
-
+    Main method of this file. Creates rules of the form "item,item,confidence,supPname" for a specified item and
+    saves it into a csv-file. Uses the apriori-algorithm to calculate the rules.
     :param item:    The item the apriori-algorithm creates rules for.
                     Could be either track_uri, track_name, artist_uri or album_uri
     :param maxPid:  Number of playlists that limits the load of data. Can be used for faster testing
-    :param minSup:
-    :param minConf:
-    :param kMax:
-    :param b:
-    :param p:
-    :param dbL1ItemSets:
-    :return:
+    :param minSup:  Minimum Support as total number of playlists that filters items out that didnt reach the minSup.
+                    Standard value is 2, so that there is a rule for as many songs as possible
+    :param minConf: Likelihood of consequent that rates the rule given antecedent.
+                    If the rule A -> B has the confidence 0.5, it means that B appears in 50% of playlists
+                    where A appears in. If the standard value of 0.2 is exceeded, there are least rules for items with
+                    high support.
+    :param kMax:    Limits the iterations of this method by the size of the item-sets.
+                    If kMax = 2, a rule could look like:
+                    [{'spotify:track:3H1LCvO3fVsK2HPguhbml0'}, {'spotify:track:0XUfyU2QviPAs6bxSpXYG4'}, 1.0]
+                    If kMax = 3, it also could look like:
+                    [{'spotify:track:3H1LCvO3fVsK2HPguhbml0', 'spotify:track:3H1LCvO3fVsKabdshbmxy'},
+                    {'spotify:track:0XUfyU2QviPAs6bxSpXYG4'}, 1.0].
+                    The standard value 2 should only be raised if maxPid is less than 1000.
+    :param b:       Save only the b best k-itemSets for a (k-1)-itemSet to save memory.
+                    Standard value of b is -1. If b is -1 all itemSets above minSUp with length k will be saved.
+                    With b != -1 the program isn't deterministic.
+    :param p:       Iterate only over max p playlists for a given (k-1)-itemSet and create only for these max p
+                    playlists k-itemSets. With the standard value of 10 the program will terminate quick and still
+                    creates significant rules
+    :param dbL1ItemSets:    If true, the database will be used to create the l1-dictionaries. Standard value is False
+                            because the db-request will fail for maxPid = 1 mio.
+    :return:    Nothing, but saves the rules in a csv-file by using saveAndSortRules().
     """
     allRules = list()
     checkParamItem('aprioriSpotify', item)
     if dbL1ItemSets:    # get l1ItemSets from db
-        numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        numUniqueItems = 1 #getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
         l1Pid2ItemSets = getL1Pid2ItemSets(item, maxPid, minSup)
         l1ItemSet2Pids = getL1ItemSet2Pids(item, maxPid, minSup)
     else:   # get l1ItemSets from csv-file
         maxFiles = (maxPid - 1) // 1000 + 1
         maxPid = maxFiles * 1000
-        numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        numUniqueItems = 1 #getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
         l1ItemSet2Pids = getL1ItemSet2ValuesFromCSV(item=item, minSup=minSup, maxFiles=maxFiles)
         l1Pid2ItemSets = getL1Pid2ItemSetsFromDict(l1ItemSet2Pids)  # this one is faster
 
@@ -46,7 +62,17 @@ def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1
 
 
 def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2):
-    # rules of form [[frozenset({pname}), frozenset({item}), confidence, supPname], ...]
+    """
+    Saves rules of the form "playlist-name (short pname),consequents,confidence,supPname" into a csv-file.
+    :param consequents: The consequent of the rules of the form "pname -> consequent, confidence"
+    :param maxPid:  Number of playlists that limits the load of data. Can be used for faster testing
+    :param minSup:  Minimum Support as total number of playlists that filters pnames out that didnt reach the minSup.
+    :param minConf: Likelihood of consequent that rates the rule given pname .
+                    If the rule A -> B has the confidence 0.5, it means that B appears in 50% of playlists
+                    where A appears in.
+    :return:    Nothing, but saves the rules in a csv-file by using saveAndSortRules().
+    """
+    # rules of form [
     maxFiles = (maxPid - 1) // 1000 + 1
     rules = list()
     checkParamItem('aprioriPname', consequents)
@@ -78,13 +104,13 @@ def getNextItemSets(currItemSet2Pids, currPid2ItemSets, minSup, k, b, p):
 
     :param currPid2ItemSets:    This parameter is necessary to get the itemSets above minSup of a playlist, so that
                                  we don't have to iterate over the entire playlist
-    :param minSup:   Specifies the minimum number of playlists the itemSet must appear in
-    :param k:               Size of itemSet
-    :param b:               Number of b - nextItemSets with highest support that should be saved
-                            Standard value of b is -1. If b is -1 all itemSets above minSUp with length k will be saved.
-                            With b != -1 the program isn't deterministic
-    :return:    pid2Itemsets and itemSet2Pids for k-itemSets in form of:
-                pid2Itemsets:
+    :param minSup:          Specifies the minimum number of playlists the itemSet must appear in
+    :param k:               Size of the next itemSet
+    :param b:               Number of b-best nextItemSets for one itemSet that should be saved
+    :param p:       Iterate only over max p playlists for a given (k-1)-itemSet and create only for these max p
+                    playlists k-itemSets
+    :return:    pid2ItemSets and itemSet2Pids for k-itemSets in form of:
+                pid2ItemSets:
                 {
                     pid: {frozenset({'item', 'item', ...}), ...}
                     ...
@@ -127,6 +153,19 @@ def getNextItemSets(currItemSet2Pids, currPid2ItemSets, minSup, k, b, p):
 
 
 def proveCandidates(itemSet1, b, k, p, minSup, currItemSet2Pids, currPid2ItemSets, nextItemSet2Pids):
+    """
+    Creates k-itemSets for a given (k-1)-itemSet.
+    :param itemSet1: The (k-1)-itemSet for which b k-itemSets will be created
+    :param b:        Number of b-best nextItemSets for one itemSet that should be saved
+    :param k:        Size of the next itemSet
+    :param p:       Iterate only over max p playlists for a given (k-1)-itemSet and create only for these max p
+                    playlists k-itemSets
+    :param minSup:  Specifies the minimum number of playlists the itemSet must appear in
+    :param currItemSet2Pids:    Dictionary that lists to each (k-1)-itemSet all playlists it appears in
+    :param currPid2ItemSets:    Dictionary that lists to each playlist all (k-1)-itemSets it appears in
+    :param nextItemSet2Pids:    Dictionary that lists to each k-itemSet all playlists it appears in
+    :return: Nothing, but fills the dictionary nextItemSet2Pids with data.
+    """
     candidates = list()
     iS1Pids = currItemSet2Pids[itemSet1]
     for iS1Pid in iS1Pids:  # for each playlist the k-1 itemSet appears in
@@ -148,6 +187,27 @@ def proveCandidates(itemSet1, b, k, p, minSup, currItemSet2Pids, currPid2ItemSet
 
 
 def getNextPid2ItemSets(currPid2ItemSets, nextItemSet2Pids):
+    """
+    Creates a dictionary pid2ItemSets from a given dictionary itemSet2Pids.
+    :param currPid2ItemSets:    Dictionary that lists to each playlist all k-itemSets it appears in
+    :param nextItemSet2Pids:    Dictionary that lists to each k-itemSet all playlists it appears in
+    :return:
+                nextPid2ItemSets:
+                {
+                    pid: {frozenset({'item', 'item', ...}), ...}
+                    ...
+                }
+                e.g. with item = track_uri and k = 2:
+                {
+                    5: {frozenset({'spotify:track:5Q0Nhxo0l2bP3pNjpGJwV1', 'spotify:track:0XUfyU2QviPAs6bxSpXYG4'}),
+                        frozenset({'spotify:track:0XUfyU2QviPAs6bxSpXYG4', 'spotify:track:3H1LCvO3fVsK2HPguhbml0'})
+                        ...},
+                    0: {frozenset({'spotify:track:3H1LCvO3fVsK2HPguhbml0', 'spotify:track:0XUfyU2QviPAs6bxSpXYG4'}),
+                        frozenset({'spotify:track:0XUfyU2QviPAs6bxSpXYG4', 'spotify:track:5Q0Nhxo0l2bP3pNjpGJwV1'})
+                        ...},
+                    ...
+                }
+    """
     nextPid2ItemSets = dict()
     for pid in currPid2ItemSets:
         nextPid2ItemSets[pid] = set()
@@ -160,7 +220,13 @@ def getNextPid2ItemSets(currPid2ItemSets, nextItemSet2Pids):
 
 
 def associationRules(l1ItemSet2Pids, currItemSet2Pids, minConf):
-    # rules of form [[frozenset({antecedents}), frozenset({consequents}), confidence, supAntecedent], ...]
+    """
+
+    :param l1ItemSet2Pids:  The dictionary
+    :param currItemSet2Pids:
+    :param minConf:
+    :return:    Rules of form [[frozenset({antecedents}), frozenset({consequents}), confidence, supAntecedent], ...]
+    """
     rules = list()
     countProgress = 0
     pb = ProgressBar(total=len(currItemSet2Pids), prefix='Calculate rules', timing=True)
@@ -194,6 +260,5 @@ def saveAndSortRules(rules, filename):
     print("Total antecedents: ", len(antecedents))
 
 
-# aprioriSpotify('track_uri', maxPid=2000, minSup=5)
-aprioriPname('track_uri', 1000000, minConf=0.2)
-#aprioriSpotify('track_uri', 2000, p=-1, minSup=10, dbL1ItemSets=False)
+aprioriSpotify('track_uri', maxPid=2000)
+# aprioriPname('track_uri', 1000000, minConf=0.2)
