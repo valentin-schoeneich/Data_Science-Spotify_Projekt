@@ -249,6 +249,8 @@ def getL1ItemSet2ValuesFromCSV(item, value='pid', minSup=2, maxFiles=1000):
     print(" -> Done!\n\t- Convert item to frozenset...", end='')
     df[item] = df[item].apply(lambda x: frozenset([x]))
     print(" -> Done!")
+    xs = {1, 2, 3}
+    x_dict = {1: 'a'}
     return {row[item]: row[valueS] for index, row in df.iterrows()}
 
 
