@@ -62,12 +62,13 @@ def createDfsForDb(filename):
     return [df_playlists, df_artist, df_tracks, df_album, df_pConT]
 
 
-def getDataFromJson(filename):
+def getDataFromJson(filename, path=pathToData):
     """
+    :param path:
     :param filename: The filename of the current json-file
     :return: The data from the json-file in form of a dataframe
     """
-    f = open(os.sep.join((pathToData, filename)))
+    f = open(os.sep.join((path, filename)))
     js = f.read()
     f.close()
     data = json.loads(js)
@@ -249,8 +250,6 @@ def getL1ItemSet2ValuesFromCSV(item, value='pid', minSup=2, maxFiles=1000):
     print(" -> Done!\n\t- Convert item to frozenset...", end='')
     df[item] = df[item].apply(lambda x: frozenset([x]))
     print(" -> Done!")
-    xs = {1, 2, 3}
-    x_dict = {1: 'a'}
     return {row[item]: row[valueS] for index, row in df.iterrows()}
 
 
