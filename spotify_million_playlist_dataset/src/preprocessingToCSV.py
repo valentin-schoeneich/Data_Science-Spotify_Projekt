@@ -1,4 +1,4 @@
-from helperMethods import natural_keys, makeCSVUnique, createIndexForCSV, checkParamItems, append, \
+from helperMethods import natural_keys, makeCSVUnique, createIndexForCSV, checkParamItems, appendSet, \
     normalize_name, saveDF2CSV, createDfsForDb, getDataFromJson, getJsonFiles, readDF_from_CSV, \
     getL1ItemSet2ValuesFromCSV, getSup
 import pandas as pd
@@ -83,7 +83,7 @@ def csvItem2Values(maxFiles, keys, values='pid', minSup=1):
     for item in keys:
         for value in values:
             df = readDF_from_CSV(f'{item}2{value}s_{maxFiles}.csv')
-            df = df.groupby(item)[f'{value}s'].apply(append).reset_index(name=f'{value}s')
+            df = df.groupby(item)[f'{value}s'].apply(appendSet).reset_index(name=f'{value}s')
             oldLen = len(df[item])
             df = df[df[f'{value}s'].map(len) >= minSup]
             saveDF2CSV(df, f'{item}2{value}s_{maxFiles}.csv')
@@ -188,3 +188,4 @@ def createFiles():
     savePopularTracks(1000)
 
 
+savePopularTracks(1000)

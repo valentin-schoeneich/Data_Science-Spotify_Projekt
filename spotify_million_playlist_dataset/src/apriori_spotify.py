@@ -261,4 +261,4 @@ def saveAndSortRules(rules, filename):
 
 
 #aprioriSpotify('track_uri', maxPid=2000)
-aprioriPname('track_uri', 1000000, minConf=0.05)
+aprioriPname('artist_uri', 1000000, minConf=0.05)

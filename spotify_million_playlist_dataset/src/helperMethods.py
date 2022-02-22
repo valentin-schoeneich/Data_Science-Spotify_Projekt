@@ -101,7 +101,7 @@ General helper-methods
 '''
 
 
-def append(xs):
+def appendSet(xs):
     """
     Convert a set in form of a string or a set of subsets (in form of a string) to a real set.
     :param xs: E.g. '{'x', 'y', 'z'}' or {'{'x', 'y', 'z'}', '{'1', '2', '3'}'}
@@ -111,6 +111,18 @@ def append(xs):
         return {elem.replace("'", "") for x in xs for elem in x[1:-1].split(', ')}
     else:
         return {elem.replace("'", "") for elem in str(xs)[1:-1].split(', ')}
+
+
+def appendList(xs):
+    """
+    Convert a iterable in form of a string or a set of subsets (in form of a string) to a list.
+    :param xs: E.g. '{'x', 'y', 'z'}' or {'{'x', 'y', 'z'}', '{'1', '2', '3'}'}
+    :return: Returns a list of elements given by xs
+    """
+    if type(xs) == list or type(xs) == set or type(xs) == pd.core.series.Series:
+        return [elem.replace("'", "") for x in xs for elem in x[1:-1].split(', ')]
+    else:
+        return [elem.replace("'", "") for elem in str(xs)[1:-1].split(', ')]
 
 
 def atoi(filename):
@@ -135,6 +147,7 @@ def normalize_name(name):
     name = name.lower()
     name = re.sub(r"[.,\/#!$%\^\*;:{}=\_`~()@]", " ", name)
     name = re.sub(r"\s+", " ", name).strip()
+    name = name.replace("'", "")
     return name
 
 
@@ -146,7 +159,7 @@ def normalize_uri(uri):
     """
     uri = str(uri)
     uri = uri.replace("frozenset", "")
-    return re.sub(r"[\"'{}(),]", "", uri).strip()
+    return re.sub(r"[\"'{}()]", "", uri).strip()
 
 
 def checkParamItems(name, items, valid=validItems):
@@ -244,7 +257,7 @@ def getL1ItemSet2ValuesFromCSV(item, value='pid', minSup=2, maxFiles=1000):
         df = readDF_from_CSV(filename)
 
     print(f" -> Done!\n\t- Convert {valueS} ...", end='')
-    df[valueS] = df[valueS].apply(lambda x: {y for y in append(x)})
+    df[valueS] = df[valueS].apply(lambda x: {y for y in appendSet(x)})
     print(" -> Done!\n\t- Filter items above minSup...", end='')
     df = df.loc[df[valueS].map(len) >= minSup]
     print(" -> Done!\n\t- Convert item to frozenset...", end='')
@@ -283,7 +296,7 @@ def getL1Pid2ItemSetsFromCSV(item, maxFiles=1000):
         print(f'\r\t- Load {filename}...', end='')
         df = readDF_from_CSV(filename)
     print(" -> Done!\n\t- Convert items to frozensets...", end='')
-    df['items'] = df['items'].apply(lambda x: {frozenset([y]) for y in append(x)})
+    df['items'] = df['items'].apply(lambda x: {frozenset([y]) for y in appendSet(x)})
     print(" -> Done!\n\t- Convert pid to int...", end='')
     df['pid'] = df['pid'].apply(lambda x: int(x[1:-1]))
     print(" -> Done!")
