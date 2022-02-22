@@ -85,7 +85,7 @@ def recommendation():
     pname2album, album2album = getRuleDicts('album_uri')
 
     incomplete = 0
-    count = 1
+    count = 0
     x1 = 0
     x2 = 0
     lenPredictions = list()
@@ -156,7 +156,7 @@ def saveAndSortPredictions(trackPred, finish, pid):
     submission.append(row)
     if finish:
         df = pd.DataFrame(submission)
-        saveDF2CSV(df, 'submission.csv', path='../')
+        saveDF2CSV(df, 'submission.csv', path='../', header=False)
 
 
 def validateSzenarios():
