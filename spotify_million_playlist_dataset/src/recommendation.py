@@ -29,35 +29,45 @@ def getMostPopular(filename):
     return {row['0']: row['1'] for index, row in df.iterrows()}
 
 
-def tryPredict(dict, key):
-    try:
-        return {consequent[0] for consequent in dict[key]}
-    except:
-        return {}
+def myUpdate(consDict, extensionDict):
+    for key in extensionDict:
+        if key in consDict:
+            consDict[key] = max(consDict[key], extensionDict[key])
+        else:
+            consDict[key] = extensionDict[key]
 
 
-def predForTrack(tracks, dictItem, itemName):
-    predictions = set()
+def tryPredict(ruleDict, key, givenTracks):
+    prediction = dict()
+    if key in ruleDict:
+        for rule in ruleDict[key]:
+            if not rule[0] in givenTracks:
+                prediction.update({rule[0]: rule[1]})
+    return prediction
+
+
+def predForTrack(tracks, dictItem, itemName, givenTracks):
+    predictions = dict()
     for track in tracks:
-        predictions.update(tryPredict(dictItem, track[itemName]))
+        myUpdate(predictions, tryPredict(dictItem, track[itemName], givenTracks))
     return predictions
 
 
-def predForItem(items, dictItem):
-    predictions = set()
+def predForItem(items, dictItem, givenTracks):
+    predictions = dict()
     for item in items:
-        predictions.update(tryPredict(dictItem, item))
+        myUpdate(predictions, tryPredict(dictItem, item, givenTracks))
     return predictions
 
 
-def addPopular(trackPred, pred, popDict, maxTracks):
+def addPopular(trackPred, pred, popDict, maxTracks, givenTracks):
     for item in pred:
         i = 0
         for track in popDict[item]:
-            if i > maxTracks:
+            if i > maxTracks or track in givenTracks:
                 break
             i += 1
-            trackPred.add(track)
+            myUpdate(trackPred, {track: pred[item]})
 
 
 def recommendation():
@@ -79,24 +89,22 @@ def recommendation():
         print(count)
         szenario = checkSzenario(playlist)
         submission.append(playlist['pid'])
-        trackPred, albumPred, artistPred = set(), set(), set()
+        trackPred, albumPred, artistPred = dict(), dict(), dict()
         tracks = playlist['tracks']
-        track_uris = set()
+        givenTracks = set()
         for track in tracks:
-            track_uris.add(track['track_uri'])
+            givenTracks.add(track['track_uri'])
 
         if szenario != 4 and szenario != 6:  # playlist-name given
             pname = normalize_name(playlist['name'])
             # make predictions from playlist-name
-            albumPred.update(tryPredict(pname2album, pname))
-            artistPred.update(tryPredict(pname2artist, pname))
-            trackPred.update(tryPredict(pname2album, pname))
+            myUpdate(albumPred, tryPredict(pname2album, pname, givenTracks))
+            myUpdate(artistPred, tryPredict(pname2artist, pname, givenTracks))
+            myUpdate(trackPred, tryPredict(pname2album, pname, givenTracks))
         # make predictions from tracks
-        albumPred.update(predForTrack(tracks, album2album, 'album_uri'))
-        artistPred.update(predForTrack(tracks, artist2artist, 'artist_uri'))
-        trackPred.update(predForTrack(tracks, track2track, 'track_uri'))
-
-        trackPred = trackPred.difference(track_uris)
+        myUpdate(albumPred, predForTrack(tracks, album2album, 'album_uri', givenTracks))
+        myUpdate(artistPred, predForTrack(tracks, artist2artist, 'artist_uri', givenTracks))
+        myUpdate(trackPred, predForTrack(tracks, track2track, 'track_uri', givenTracks))
 
         if len(trackPred) < 5:
             print("Found", len(trackPred), "predictions for playlist:", playlist)
@@ -105,17 +113,17 @@ def recommendation():
 
         for i in range(0, 4):
             kmax = (500 - len(trackPred)) // max(len(albumPred) + len(artistPred), 1)
-            addPopular(trackPred, albumPred, album2mostPopular, kmax)
-            addPopular(trackPred, artistPred, artist2mostPopular, kmax)
-            trackPred = trackPred.difference(track_uris)
+            addPopular(trackPred, albumPred, album2mostPopular, kmax, givenTracks)
+            addPopular(trackPred, artistPred, artist2mostPopular, kmax, givenTracks)
+
             if len(trackPred) >= 500:
                 x1 += 1
                 break
 
-            albumPred.update(predForItem(albumPred, album2album))
-            artistPred.update(predForItem(artistPred, artist2artist))
-            trackPred.update(predForItem(trackPred, track2track))
-            trackPred = trackPred.difference(track_uris)
+            albumPred.update(predForItem(albumPred, album2album, givenTracks))
+            artistPred.update(predForItem(artistPred, artist2artist, givenTracks))
+            trackPred.update(predForItem(trackPred, track2track, givenTracks))
+
             if len(trackPred) >= 500:
                 x2 += 1
                 break
@@ -124,10 +132,8 @@ def recommendation():
             incomplete += 1
         i = 0
         while len(trackPred) < 500:
-            trackPred.add(mostPopularTracks[i])
+            myUpdate(trackPred, {mostPopularTracks[i]: 0})
             i += 1
-
-        submission.append(trackPred)
 
         count += 1
         lenPredictions.append(len(trackPred))
@@ -142,7 +148,6 @@ def saveAndSortPredictions(trackPred):
     incomplete = 0
     if len(trackPred) < 500:
         incomplete += 1
-
 
 
 def validateSzenarios():
@@ -185,4 +190,5 @@ def checkSzenario(playlist):
 
 
 recommendation()
+
 
