@@ -40,7 +40,7 @@ Damit wir wissen, wie groß wir `minSup` wählen können, um dennoch genug Regel
 printSupInfo('track_uri')
 ```
 
-<img src="./sup_track_uri.png" alt="sup_track_uri.png">
+<img src="./images/sup_track_uri.png" alt="sup_track_uri.png">
 
 Wie man in der vierten Spalte erkennen kann, haben 47% aller Tracks nur einen Support von 1. 
 Für all diese Tracks lassen sich daher keine aussagekräftigen Regeln bilden. Wir haben uns gefragt, ob das eventuell an 
@@ -53,7 +53,7 @@ Wir haben die Methode deshalb auch für den ***track_name*** durchlaufen lassen,
 printSupInfo('track_name')
 ```
 
-<img src="./sup_track_name.png" alt="sup_track_name.png">
+<img src="./images/sup_track_name.png" alt="sup_track_name.png">
 
 Das Ergebnis ist leider ziemlich das gleiche. Wir haben die Methode auch für die Künstler, Alben und Playlist-Namen aufgerufen:
 
@@ -61,13 +61,13 @@ Das Ergebnis ist leider ziemlich das gleiche. Wir haben die Methode auch für di
 printSupInfo('artist_uri')
 ```
 
-<img src="./sup_artist_uri.png" alt="sup_artist_uri.png">
+<img src="./images/sup_artist_uri.png" alt="sup_artist_uri.png">
 
 ```
 printSupInfo('album_name')
 ```
 
-<img src="./sup_album_uri.png" alt="sup_album_uri.png">
+<img src="./images/sup_album_uri.png" alt="sup_album_uri.png">
 
 
 Das Ergebnis für die Alben und Künstler ist ähnlich, auch für diese lassen sich nicht viel mehr Tracks für Regeln finden.
