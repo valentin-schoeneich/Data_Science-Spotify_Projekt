@@ -37,7 +37,7 @@ Damit wir wissen, wie groß wir `minSup` wählen können, um dennoch genug Regel
 `printSupInfo(item)` geschrieben, welche auflistet, wie oft welcher Support vorkommt.
 
 
-<img src="sup_track_uri.png" alt="sup_track_uri.png">
+<img src="./sup_track_uri.png" alt="sup_track_uri.png">
 
 
 
