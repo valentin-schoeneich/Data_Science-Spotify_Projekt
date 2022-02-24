@@ -36,9 +36,54 @@ Parameter `minSup`. Um so kleiner `minSup` gewählt wird, für umso mehr Tracks 
 Damit wir wissen, wie groß wir `minSup` wählen können, um dennoch genug Regeln zu erstellen, haben wir uns eine Methode 
 `printSupInfo(item)` geschrieben, welche auflistet, wie oft welcher Support vorkommt.
 
+```
+printSupInfo('track_uri')
+```
 
 <img src="./sup_track_uri.png" alt="sup_track_uri.png">
 
+Wie man in der vierten Spalte erkennen kann, haben 47% aller Tracks nur einen Support von 1. 
+Für all diese Tracks lassen sich daher keine aussagekräftigen Regeln bilden. Wir haben uns gefragt, ob das eventuell an 
+der Eindeutigkeit der ***track_uri*** liegt und deshalb eigentlich gleiche Tracks wegen unterschiedlicher Versionen
+oder doppelten Uploads nicht als mehrfach gezählt werden können.
+Wir haben die Methode deshalb auch für den ***track_name*** durchlaufen lassen, welchen wir zusammen setzten aus
+`track_name + " by " + artist_name`.
+
+```
+printSupInfo('track_name')
+```
+
+<img src="./sup_track_name.png" alt="sup_track_name.png">
+
+Das Ergebnis ist leider ziemlich das gleiche. Wir haben die Methode auch für die Künstler, Alben und Playlist-Namen aufgerufen:
+
+```
+printSupInfo('artist_uri')
+```
+
+<img src="./sup_artist_uri.png" alt="sup_artist_uri.png">
+
+```
+printSupInfo('album_name')
+```
+
+<img src="./sup_album_uri.png" alt="sup_album_uri.png">
+
+
+Das Ergebnis für die Alben und Künstler ist ähnlich, auch für diese lassen sich nicht viel mehr Tracks für Regeln finden.
+Wir haben die Methode auch für ***album_name*** und ***artist_name*** aufgerufen, aber auch für diese Attribute war die Ausgabe
+ähnlich.
+Daraus lässt sich ableiten, dass sich für Rund die Hälfte der Tracks aus unserem Lerndatensatz keine
+aussagekräftigen Regeln ableiten lassen.
+
+```
+printSupInfo('name')
+```
+
+<img src="./sup_playlist_name.png" alt="sup_playlist_name.png">
+
+Der prozentuale Anteil von Playlist-Namen, die nur einmal vorkommen, ist deutlich geringer als der von Tracks. 
+Das lässt vermuten, dass die Assoziationsanalyse für diesen Bestandteil am besten funktionieren wird.
 
 
 
