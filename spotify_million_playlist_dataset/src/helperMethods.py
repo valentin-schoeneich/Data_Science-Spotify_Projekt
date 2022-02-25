@@ -159,7 +159,7 @@ def normalize_uri(uri):
     """
     uri = str(uri)
     uri = uri.replace("frozenset", "")
-    return re.sub(r"[\"'{}()]", "", uri).strip()
+    return re.sub(r"[\"'{}(),]", "", uri).strip()
 
 
 def checkParamItems(name, items, valid=validItems):

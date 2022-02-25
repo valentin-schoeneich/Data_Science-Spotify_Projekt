@@ -5,10 +5,11 @@ from helperMethods import getL1Pid2ItemSetsFromDict, getL1ItemSet2ValuesFromCSV,
 from progressBar import ProgressBar
 
 
-def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1ItemSets=False):
+def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1ItemSets=False, saveRules=False):
     """
     Main method of this file. Creates rules of the form "item,item,confidence,supPname" for a specified item and
     saves it into a csv-file. Uses the apriori-algorithm to calculate the rules.
+    :param saveRules:
     :param item:    The item the apriori-algorithm creates rules for.
                     Could be either track_uri, track_name, artist_uri or album_uri
     :param maxPid:  Number of playlists that limits the load of data. Can be used for faster testing
@@ -36,15 +37,15 @@ def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1
     :return:    Nothing, but saves the rules in a csv-file by using saveAndSortRules().
     """
     allRules = list()
+    maxFiles = (maxPid - 1) // 1000 + 1
     checkParamItem('aprioriSpotify', item)
     if dbL1ItemSets:    # get l1ItemSets from db
-        numUniqueItems = 1 #getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
         l1Pid2ItemSets = getL1Pid2ItemSets(item, maxPid, minSup)
         l1ItemSet2Pids = getL1ItemSet2Pids(item, maxPid, minSup)
     else:   # get l1ItemSets from csv-file
-        maxFiles = (maxPid - 1) // 1000 + 1
         maxPid = maxFiles * 1000
-        numUniqueItems = 1 #getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
         l1ItemSet2Pids = getL1ItemSet2ValuesFromCSV(item=item, minSup=minSup, maxFiles=maxFiles)
         l1Pid2ItemSets = getL1Pid2ItemSetsFromDict(l1ItemSet2Pids)  # this one is faster
 
@@ -57,8 +58,8 @@ def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1
                                                                    minSup, k, b, p)
         print("k: ", k, "->", len(currentItemSet2Pids), "itemSets")
         allRules.extend(associationRules(l1ItemSet2Pids, currentItemSet2Pids, minConf))
-
-    saveAndSortRules(allRules, f'{maxFiles}_{item}2{item}.csv')
+    if saveRules:
+        saveAndSortRules(allRules, f'{maxFiles}_{item}2{item}.csv')
 
 
 def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2):
@@ -72,7 +73,6 @@ def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2):
                     where A appears in.
     :return:    Nothing, but saves the rules in a csv-file by using saveAndSortRules().
     """
-    # rules of form [
     maxFiles = (maxPid - 1) // 1000 + 1
     rules = list()
     checkParamItem('aprioriPname', consequents)
@@ -260,5 +260,5 @@ def saveAndSortRules(rules, filename):
     print("Total antecedents: ", len(antecedents))
 
 
-#aprioriSpotify('track_uri', maxPid=2000)
-aprioriPname('artist_uri', 1000000, minConf=0.05)
+aprioriSpotify(item='track_uri', maxPid=300, minSup=2, kMax=2, b=-1, dbL1ItemSets=True)
+
