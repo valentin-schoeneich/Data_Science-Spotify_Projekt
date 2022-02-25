@@ -1,10 +1,10 @@
-# Dokumentation: Versuche mit mlxtend
+## Dokumentation: Versuche mit mlxtend
 Um eine Assoziationsanalyse über unsere Spotofy Daten durchzuführen liegt es
 Nahe eine Library zu verwenden, welche die benötigte Funktionalität bereits 
 bereitstellt. Wir sind dabei auf Library mlxtend gestoßen, die z.B. Apriori [1] und Funktionen
 zur Generierung von Assoziationsregeln [2] implementiert.
 
-## Data-Input
+### Data-Input
 Die benötigten Daten fragen wir aus unserer Datenbank ab. Bevor wir aber die Daten an die
 entsprechende mlxtend Funktion übergeben können, müssen diese in das passende Format gebracht
 werden. Dazu befindet sich in src/db die Funktion `getC1ItemSets` welche die Parameter item und
@@ -50,7 +50,7 @@ Jetzt sind die Daten in dem für mlxtend erforderlichen Format bereit für die w
 Anmerkung: Analog zu `track_uri`, kann man die Abfragen auch für `album_uri` und `artist_uri`
 generieren um dann im weiteren Verlauf Regeln für Ablbums und Artists zu erzeugen.
 
-## Die mlxtend Library
+### Die mlxtend Library
 Zunächst überführen wir die Werte weiter in eine binäre Darstellung. Ein Track ist entweder in
 der Playlist enthalten, dann ist der Wert in der Spalte True, ansonsten false. Dies erreichen
 wir durch den TransactionEncoder von mlxtend. Dann erzeugen wir aus der Liste wieder einen
@@ -102,7 +102,7 @@ wir das wir über die Konfidenz ermittelt werden sll, ob eine Regel interessant 
     18      (6, 7)         (2)                 0.5
     19         (7)      (2, 6)                 0.5
 
-## Probleme mit mlxtend
+### Probleme mit mlxtend
 Zunächst wollten wir den Algorithmus für wenige Playlists testen. Dafür haben wir 100
 Playlists geladen und mlxtend hat schon über 250.000 Itemsets generiert. Deshalb haben wir
 in der mlxtend-Funktion `apriori` den Parameter `max_len` auf 2 gesetzt um nur noch Itemsets
@@ -113,7 +113,7 @@ zur Folge, dass der Algorithmus 3-6x länger braucht aber Speicher-schonend arbe
 Bei 100.000 Plylists war dann selbst mit `low_memory=True` und `max_len=2` der Arbeitsspeicher
 derat ausgelastet, dass das Program mit Swapping beginnen musste.
 
-## References
+### References
 [1] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/apriori/ \
 [2] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/association_rules/
 
