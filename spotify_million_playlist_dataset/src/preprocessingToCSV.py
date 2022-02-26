@@ -187,5 +187,3 @@ def createFiles():
     csvItem2Values(1000, {'album_uri', 'artist_uri'}, 'track_uri')
     savePopularTracks(1000)
 
-
-savePopularTracks(1000)
