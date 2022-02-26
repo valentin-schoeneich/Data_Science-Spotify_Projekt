@@ -3,7 +3,7 @@
 
    Usage:
 
-    python check.py path-to-mpd-data/
+    python checkData.py path-to-mpd-data/
 
 """
 import sys
@@ -12,14 +12,12 @@ import string
 import datetime
 import os
 
-'Test written by Louis'
-
 min_tracks_per_playlist = 5
 max_tracks_per_playlist = 250
 min_artists_per_playlist = 3
 min_albums_per_playlist = 2
 max_files_for_quick_processing = 10
-latest_add_ts = int(datetime.datetime(2017, 11, 1).strftime("%s")) * 1000
+# latest_add_ts = int(datetime.datetime(2017, 11, 1).strftime("%s")) * 1000
 pids = set()
 
 artist_names = {}
@@ -126,7 +124,7 @@ def process_playlist(playlist):
     )
     tassert(playlist["num_edits"] > 0, "too few edits %d", playlist["num_edits"])
     tassert(
-        playlist["modified_at"] <= latest_add_ts,
+        #playlist["modified_at"] <= latest_add_ts,
         "modified_at too late %d",
         playlist["modified_at"],
     )
@@ -245,8 +243,10 @@ def tassert(condition, fmtstring, *args):
         gstats["errors"] += 1
         print(fmtstring % args)
 
+
 def usage():
     print(sys.argv[0], "--path path-to-mpd [--quick] [--verbose]")
+
 
 if __name__ == "__main__":
     path = None

@@ -36,18 +36,18 @@ def getAboveMinSup(candidateTrackSets, playlistSets, minSup, globalTrackSetWithS
     return freqTrackSet
 
 
-def getUnion(trackSet, length):
+def getUnion(trackSets, length):
     """
     This method was used by our first apriori-attempt. It is too slow for more than 10.000 tracks
     and returns way too much candidates in first round from l1TrackSet to l2TrackSet.
     With length = 2 it returns len(trackSet) * (len(trackSet)-1) / 2 candidates.
-    :param trackSet:    A set of all frequent track-sets above minSup in form of {frozenset({'track_uri'}), ...}
+    :param trackSets:    A set of all frequent track-sets above minSup in form of {frozenset({'track_uri'}), ...}
     :param length:      The length that the union track-set should have
     :return:    Returns a set of sub-set's just like the parameter trackSet but with the new length for each sub-set
                 E.g trackSet = {A,B,C,D}, length = 2
                 returns: {{A,B}, {A,C}, {A,D}, {B,C}, {B,D}, {C,D}}
     """
-    return set([i.union(j) for i in trackSet for j in trackSet if len(i.union(j)) == length])
+    return set([i.union(j) for i in trackSets for j in trackSets if len(i.union(j)) == length])
 
 
 def pruning(candidateSet, prevFreqSet, length):
@@ -103,19 +103,19 @@ def aprioriFromDB(maxPlaylists, minSup, minConf=0.5, kMax=2):
                     {'spotify:track:0XUfyU2QviPAs6bxSpXYG4'}, 1.0]
     :return:    Rules and the globalFreqTrackSet
     """
+    minSupPercent = minSup / maxPlaylists
     uniqueTracks, playlists = getFromDB(maxPlaylists)
     numUniqueTracks = len(uniqueTracks)
     numPlaylists = len(playlists)  # number of playlists could be smaller than maxPlaylists
     print("*" * 80, "\nPlaylists: ", numPlaylists)
     print("Unique tracks: ", numUniqueTracks)
-    print("MinSup: ", minSup, "->", numPlaylists * minSup, "playlists")
 
     # Final result global frequent itemset
     globalFreqTrackSet = dict()
     # Storing global itemset with support count
     globalTrackSetWithSup = defaultdict(int)
 
-    currentLSet = getAboveMinSup(uniqueTracks, playlists, minSup, globalTrackSetWithSup)  # L1Itemset
+    currentLSet = getAboveMinSup(uniqueTracks, playlists, minSupPercent, globalTrackSetWithSup)  # L1Itemset
     globalFreqTrackSet[1] = currentLSet
     print("Tracks above minSup:", len(currentLSet), "->", len(currentLSet) / numUniqueTracks * 100, "%")
     print("*" * 80)
@@ -123,7 +123,7 @@ def aprioriFromDB(maxPlaylists, minSup, minConf=0.5, kMax=2):
     # Calculating frequent track set
     while currentLSet and k <= kMax:
         # Self-joining Lk
-        print(f"getUnion for k ={k} ...", end='')
+        print(f"getUnion for k = {k} ...", end='')
         candidateSet = getUnion(currentLSet, k)
         print(" -> Done!", len(candidateSet), "Candidates")
 
@@ -132,7 +132,7 @@ def aprioriFromDB(maxPlaylists, minSup, minConf=0.5, kMax=2):
         # Scanning itemSet for counting support
         print(f"getAboveMinSup for k = {k} ...", end='')
         currentLSet = getAboveMinSup(
-            candidateSet, playlists, minSup, globalTrackSetWithSup)
+            candidateSet, playlists, minSupPercent, globalTrackSetWithSup)
         print(" -> Done!", len(currentLSet), "Tracks above minSup")
 
         if k == 2:  # tracks  can be used for recommendation
@@ -151,5 +151,5 @@ def aprioriFromDB(maxPlaylists, minSup, minConf=0.5, kMax=2):
     return globalFreqTrackSet, rules
 
 
-x, y = aprioriFromDB(10, 0.2)
-print(y)
+aprioriFromDB(maxPlaylists=300, minSup=2, kMax=2)
+
