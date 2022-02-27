@@ -272,7 +272,7 @@ Um für die Challenge genug Regeln zu bilden, müssen wir jedoch mit ca. 100.000
 Wie oben beschrieben, ist die Komplexität von `getAboveMinSup()` nicht nur von den `trackSets` abhängig, sondern auch von der Anzahl der Playlists.
 Dadurch bringt es uns nichts, die Ausgabe von `getUnion()` kleiner zu halten. Denn wenn über 1 Mio. Playlists iteriert werden muss, reichen 10.000 `trackSets` aus, damit die Methode nicht terminiert.
 
-## Ansatz II - Dictionaries verwenden
+## Ansatz II - Dictionaries & Neuer Algorithmus
 Um die Probleme von Ansatz I lösen zu können, haben wir uns dazu entschieden den Apriori-Algorithmus selbst zu programmieren und für unseren Anwendungsfall zu optimieren.
 Dieser Ansatz hat es uns letztendlich ermöglicht, die Assoziationsanalyse für 1 Mio. Playlists auf unseren Computern auszuführen, um so genug Regeln für die Challenge speichern zu können.
 Der Ansatz kann in der Datei **apriori_spotify.py** begutachtet werden.
@@ -356,16 +356,125 @@ Rechnung:
 ### Probleme & Lösungen
 Trotz der deutlichen Performance-Steigerung gab es auch für diesen Ansatz noch Optimierungsbedarf.
 
-#### I - Keine lineare Laufzeit
+#### Problem I - Arbeitsspeicher reicht für große Datenmengen nicht aus
+Wir haben festgestellt, dass bei einem großen Datensatz (40.000 - 100.000 Playlists) der Arbeitsspeicher auslastet. Je länger das Programm läuft, desto mehr Vereinigungen müssen zwischengespeichert werden.
+Nach einer gewissen Zeit fängt Python dann an, die Daten auf der Festplatte auszulagern und das Programm wird extrem langsam.
+
+Deshalb haben wir uns überlegt, wie wir die Speicherauslastung reduzieren können.
+
+**Idee: Die Items durchnummerieren.**  
+Die Uris von album und track sind 37 Zeichen lang und von artist 38 Zeichen lang. Der erste Teil der Uri (z.B. spotify:artist) ist redundant und muss für jede Uri mitgespeichert werden.
+
+Theoretisch sollten 3 Bytes ausreichen, um alle Items eindeutig zu identifizieren. Mit 2**24 könnte man über 16 mio. Items speichern, das reicht für alle Tracks, Alben und Artists zusammen. 
+Die durchnummerierung haben wir direkt in Psql vorgenommen, um sie nur einmalig ausführen zu müssen:
+- `ALTER TABLE artists ADD COLUMN artist_id SERIAL;`
+- `ALTER TABLE albums ADD COLUMN album_id SERIAL;`
+- `ALTER TABLE tracks ADD COLUMN track_id SERIAL;`
+
+Weil sich die id’s zum Teil überschneiden, war die Idee, in Python ein zusätzliches Byte als Prefix anzuhängen. Für artist ein "s“ (für singer), bei album ein "a" und bei track ein "t". Damit könnte jedes Item mit 4 Byte gespeichert werden. Gehen wir davon aus, dass ein Zeichen aus der Uri ein Byte benötigt, ergbibt sich folgende theoretische Speichereinsparung:
+
+**Tracks:**  
+2.200.000 * 37 = 81,4 MB  
+2.200.000 * 4 = 8,8 MB  
+**Albums:**  
+700.000 * 37 = 25,9 MB  
+700.000 * 4 = 2,8 MB  	
+**Artists:**  
+300.000 * 38 =  MB  
+300.000 * 4 = 1,2 MB  
+
+Das bedeutet eine theoretische Einsparung von 89%.   
+
+**Anmerkung:** Der Speicherbedarf von 81 MB führt natürlich zu keiner Speicherauslastung. Während des Programmdurchlaufs ergeben sich jedoch für jedes Item weitere hunderte ItemSets, die verglichen werden müssen.   
+
+**Validierung:**  
+Die Methode `getL1ItemSet2Pids()` wurde jeweils für die ***track_id*** und für die ***track_uri*** aufgerufen. Testweise haben wir die Abfrage auf 10.000 Playlists beschränkt und `minSup=2` gewählt.  
+Um sicherzustellen, dass bei der SQL-Abfrage kein Fehler passiert ist, haben wir uns jeweils noch die Länge des Dictionary’s ausgeben lassen.
+
+```
+dict_id = getL1ItemSet2Pids('track_id', 10000, 0.0002)
+dict_uri = getL1ItemSet2Pids('track_uri', 10000, 0.0002)
+print(f"len(dict_id): {len(dict_id)}, sizeof(dict_id): {sys.getsizeof(dict_id)}")
+print(f"len(dict_id): {len(dict_uri)}, sizeof(dict_id): {sys.getsizeof(dict_uri)}")
+```
+
+**Output:**
+
+```
+len(dict_id): 61162, sizeof(dict_id): 2621536
+len(dict_id): 61162, sizeof(dict_id): 2621536
+```
+
+Offensichtlich ist die Länge exakt die gleiche. Es lag der Verdacht nahe, dass uns ein Fehler unterlaufen ist und das Dicionary das gleiche ist.
+Wir haben uns die Dictionaries deshalb direkt ausgeben lassen:
+
+```
+dict_id = getL1ItemSet2Pids('track_id', 10, 0.2)
+dict_uri = getL1ItemSet2Pids('track_uri', 10, 0.2)
+print(dict_uri)
+print(dict_id)
+```
+
+**Output:**  
+
+```
+{frozenset({'spotify:track:5Q0Nhxo0l2bP3pNjpGJwV1'}): {0, 5}, … }
+{frozenset({31}): {0, 5}, frozenset({34}): {0, 5}, …}
+```
+
+
+**Resultat:**  
+Uns scheint kein Fehler unterlaufen zu sein. Dennoch ergab sich keine Speichereinsparung. Wir haben den Ansatz deshalb verworfen.
+Die Lösung des Problems ergab sich letztendlich mit dem Parameter `b`, den wir im nächsten Absatz erläutern.
+
+
+#### Problem II - Es werden zu viele Vereinigungen gebildet
+Führt man folgenden Aufruf auf (Dauer ca. 15 min.):
+```
+aprioriSpotify(item='track_uri', maxPid=20000, minSup=2, kMax=2, b=-1, p=-1, dbL1ItemSets=False, saveRules=True)
+```
+
+Zeigt der Output im Terminal, dass es für 20.000 Playlists ca. 100.000 l1itemSets gibt. Das entspricht Rund 1/10 aller frequent Tracks.
+Daraus werden ca. 7 Mio. l2itemSets gebildet, für die 
+* falls `kMax=2` ist, eine CSV-Datei mit Regeln generiert wird. Diese hat eine größe von ca. 220 MB. Da wir vorhaben, über den gesamten Datensatz zu iterieren, würde eine Datei von **weit** über 2 GB entstehen, denn für einen größeren Datensatz werden überproportional viele l2ItemSets gebildet.
+  Eine Datei von über 2 GB ist für uns aber unbrauchbar, da sie den Arbeitsspeicher beim Einlesen zu sehr belastet. Sie wäre also zu groß für die Recommendation.
+* falls `kMax>2` ist, wieder versucht wird nächst größere itemSets zu bilden. Für ca. 7 Mio. l2ItemSets würde das Programm allerdings Stunden brauchen. 
+
+
+
+
+Gerade weil wir uns die Option offen halten wollten, auch itemSets größer 2 zu bilden, haben wir uns dazu entschieden, einen neuen Parameter `b` einzuführen.
+Dieser limitiert die Anzahl an Vereinigungen, die für ein einzelnes itemSet gebildet werden. Wir speichern dabei die `b` besten Vereinigungen, indem wir für ein itemSet zunächst alle Vereinigungen bilden und diese dann absteigend nach dem Support sortieren.  
+
+**Validierung:**  
+
+**Hinweis**: Zum Zeitpunkt als das Problem aufgetreten ist, gab es die Parameter`p` und `b` noch nicht.
+Sie wurden deshalb zur Reproduktion auf -1 gesetzt und im folgenden näher erläutert. 
+
+Der Aufruf
+
+```
+aprioriSpotify(item='track_uri', maxPid=500, minSup=2, kMax=3, b=-1, p=-1, dbL1ItemSets=True)
+```
+
+liefert von 4.925 l1ItemSets 58.183 l2ItemSets und benötigt um die l3ItemSets zu berechnen ca. 2 Minuten.
+
+Der Aufruf 
+
+```
+aprioriSpotify(item='track_uri', maxPid=500, minSup=2, kMax=3, b=5, p=-1, dbL1ItemSets=True)
+```
+
+liefert von 4.925 l1ItemSets nur 14.729 itemSets. Denn für jedes der 4.925 l1ItemSets werden in diesem Fall maximal die 5 besten Vereinigungen gebildet. Damit können maximal 4.925 * 2 l2ItemSets gebildet werden.
+Die Berechnung der l3ItemSets dauert dadurch nur ca. 4 Sekunden. 
+
+#### Problem III - Keine lineare Laufzeit
 
 Wir haben den Ansatz für verschieden viele Playlists getestet und uns langsam gesteigert.
-Für 10.000 Playlists benötigt das Programm ca. 4 Minuten, für 40.000 Playlists ca. 30 Minuten und für 100.000 Playlists 
+Für 10.000 Playlists benötigt das Programm ca. 4 Minuten (was bereits ein **deutlicher** Fortschirtt ist), für 40.000 Playlists ca. 30 Minuten und für 100.000 Playlists 
 ca. 6-8 Stunden. Letzteres haben wir allerdings bei der Hälfte der Laufzeit abgebrochen.
 
 Der Ergebnisse können wie folgt reproduziert werden:
-
-**Hinweis**: Zum Zeitpunkt als das Problem aufgetreten ist, gab es die Parameter `b` und `p` noch nicht.
-Sie wurden deshalb zur Reproduktion auf -1 gesetzt.
 
 ```
 aprioriSpotify(item='track_uri', maxPid=10000, minSup=2, kMax=2, b=-1, p=-1, dbL1ItemSets=True)
@@ -380,9 +489,9 @@ Wenn wir uns den oben gezeigten Screenshot nochmal ansehen, erkennt man, dass es
 <img src="./images/sup_track_uri.png" alt="sup_track_uri.png">
 
 Außer diesem Track gibt es natürlich noch viele weitere Tracks für die jeweils über tausende Playlists iteriert werden muss.
-Der Grund für den nicht-linearen Zeitaufwand liegt also daran, dass für einen größen Datensatz der durchschnittliche Support von items steigt.
+Der Grund für den nicht-linearen Zeitaufwand ist also der, dass für einen größen Datensatz der durchschnittliche Support von items steigt.
 
-Wir haben deshalb beschlossen, einen weiteren Parameter `p` einzuführen, der die Anzahl an Iterationen für ein einzelnes itemSet limitiert.
+Wir haben deshalb beschlossen einen weiteren Parameter `p` einzuführen, der die Anzahl an Iterationen für ein einzelnes itemSet limitiert.
 
 Ein Test hat gezeigt, dass Laufzeit nun eher linear ist:
 ```
@@ -425,16 +534,76 @@ Dafür gibt es zwei Gründe:
     
     
 2. **In Verbindung mit `b` gibt es weniger Überschneidung**  
-  
-  
+    Dadurch, dass wir aus Speicher und Performance-Gründen nur die `b` besten itemSets speichern, werden in dem `set`, dass alle neuen Vereinigungen speichert mehr Duplikate rausgefiltert.  
+   **Beispiel**:
+   - Das l1ItemSet besteht aus den Tracks {a, b, c, d}
+   - Es wird nun über alle vier Tracks iteriert und Paare gebildet.
+   - Bei a sind nun die Paare {{a, b}, {a, d}} die besten und werden gespeichert 
+   - Für b werden nun wieder die besten Paare gespeichert. Es ist wieder das Paar {a, b} dabei, welches verworfen wird, weil es schon gefunden wurde.
     
-    
-   
-   
+    Dadurch, dass nur `p` Playlists pro Track durchlaufen werden, entsteht mehr Variation und es müssen weniger Duplikate entfernt werden.
 
+Das weniger gute Regeln bzw. Vereinigungen verworfen werden, zeigt auch unsere Validierung.
+Bei dieser haben wir den durchschnittlichen Support der l2ItemSets berechnet und fesgestellt, dass er mit `p=10` höher wurde **und** mehr Vereinigungen gefunden wurden.
 
-#### II - Es werden zu viele Regeln erstellt
-#### III - Datenbank-Abfrage dauert zu lange
+**Validierung:**
+
+```
+aprioriSpotify(item='track_uri', maxPid=40000, minSup=2, kMax=2, b=5, p=-1, dbL1ItemSets=True)
+```
+l1ItemSets: 164.664  
+Dauer: [37:54 min:sec]  
+l2ItemSets: 449.764  
+Durchschnittlicher Support l2ItemSets: 4,38
+
+```
+aprioriSpotify(item='track_uri', maxPid=40000, minSup=2, kMax=2, b=5, p=10, dbL1ItemSets=True)
+```
+l1ItemSets: 164.664  
+Dauer: [3:12 min:sec]   
+l2ItemSets: 470.884  
+Durchschnittlicher Support l2ItemSets: 5,22
+
+#### Problem IV - Datenbank-Abfrage dauert zu lange
+Mit den Parametern `p` und `b` hatten wir den Algorithmus, nun soweit, dass er für 100.000 Playlists in wenigen Minuten terminierte. Auch die DB-Abfragen, welche die zwei Dictionaries generieren, dauern für 100.000 Playlists nur ca. 7 Minuten.  
+Im nächsten Schritt wollten wir den Algorithmus deshalb für 1 Mio. Playlists aufrufen und haben festgestellt, dass die DB keine Antowort auf die Abfragen der Methoden `getL1Pid2ItemSets()` und `getL1ItemSet2Pids` liefert.
+
+Wir haben uns überlegt, dass das vielleicht mit der Komplexität der Abfragen zusammenhängt, die diverse ***group-bys*** und String-Konkatenationen beinhalten.
+
+Die erste Idee war deshalb, die Berechnung der Dictionaries auf das Programm auszulagern und die Abfrage einfacher zu gestalten.
+Aber bereits eine einfache Abfrage wie:
+
+```
+_dbReq(f'SELECT track_uri, pid FROM pcont WHERE pid<1000000')
+```
+
+dauert ca. 10 Minuten. Das Problem bei dieser Abfrage ist zudem, dass sie ca. 66 Mio. Zeilen liefert und den Arbeitsspeicher überlastet. 
+Das Programm müsste im Anschluss über 66 Mio. Zeilen iterieren und die zwei Dictionaries bilden. Diese Prozedur müsste bei jedem Programmdurchlauf wiederholt werden und das war im Testbetrieb leider nicht praktikabel.
+
+**Lösung:**  
+Wir haben uns dazu entschieden die DB nur für Abfragen < 100.000 zu verwenden und haben für größere Datensätze zwei weitere Preprocessing-Methoden hinzugefügt:
+* `csvItem2Values(maxFiles, keys, values='pid', minSup=1)`   
+  Diese Methode iteriert über `maxFiles` aus dem gegebenen JSON-Datensatz und erstellt CSV-Dateien mit jeweils nur zwei Spalten.
+  Die linke Spalte stellt dabei den key eines Dictionary’s dar, während die rechte Spalte die values eines Dictionary’s in Form einer Menge repräsentiert.  
+  Mit dem Parametern `keys` und `values` kann man jeweils eine Liste übergeben. Für jedes key-value-Paar wird eine eigene CSV-Datei generiert.
+  Mit dem Parameter `minSup` lassen sich bereits nur die items speichern, deren Support über `minSup` liegt. Dadurch kann Speicherplatz gespart werden.
+  Es empfiehlt sich dennoch `minSup=1` zu lassen, da die Speichereinsparung nicht hoch ist und man die Datei für mehr Anwendungsfälle verwenden kann.
+  
+* `csvPid2ItemsFromCSV(maxFiles, items)`  
+  Funktioniert ähnlich wie `csvItem2Values()`, nur dass der key eine ***pid*** ist und die CSV-Datei nicht aus den JSON-Daten, sondern aus einer bestehenden CSV-Datei generiert wird.
+  Wir haben später festgestellt, dass wir dazu ebenfalls die Methode `csvItem2Values()` verwenden können. Außerdem wird eine Datei mit einer ***pid*** als key so groß, dass das Laden der Datei länger dauert, als das generieren im Arbeitsspeicher.
+  Die Methode findet deshalb keine Andwendung mehr.
+  
+
+**Vorteile:**  
+* Der Arbeitsspeicher überlastet nicht, weil wir für jede JSON-Datei Gruppierungen vornehmen und die CSV-Datei als Puffer verwenden (bzw. die CSV-Datei allmählich aufbauen)
+* Die Berechnung der CSV-Dateien muss nur einmal durchgeführt werden
+* Das Laden der CSV-Datei geht deutlich schneller die Berechnung
+* Es gab einige Tage an denen wir nicht auf die DB zugreifen konnten. Mit den CSV-Dateien konnten wir dennoch am Projekt weiterarbeiten.
+
+**Nachteile:**
+* Wir müssen für jeden Anwendungsfall eine eigene CSV-Datei erstellen
+* Großer Entwicklungsaufwand: Es mussten diverse Methoden zum Erstellen und Auslesen von CSV-Dateien geschrieben werden
 
 ## Ansatz III - Library von mlxtend verwenden
 Um eine Assoziationsanalyse über unsere Spotofy Daten durchzuführen liegt es
@@ -555,18 +724,19 @@ derat ausgelastet, dass das Program mit Swapping beginnen musste.
 [1] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/apriori/ \
 [2] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/association_rules/
 ## Recommendation
-## Code-Struktur
-* **preprocessingToCSV.py**
-* **apriori_first.py**
-* **apriori_spotify.py**
-* **db.py**
-* **helperMethods.py**
-* **progressBar.py**
-* **apriori_mlxtend.py**
-* **recommendation.py**
-* ***src/mpd_tools***
-* ***challenge***
-* ***data***
-* ***data_processed***
-* ***data_rules***
+## Code-Struktur & Mitwirken der Teammitglieder
+* **preprocessingToCSV.py**     Valentin, Vincent, Louis     
+* **apriori_first.py**          Valentin, Vincent, Louis
+* **apriori_spotify.py**        Louis
+* **db.py**                     Vincent, Louis
+* **helperMethods.py**          Valentin, Louis
+* **progressBar.py**            Louis
+* **apriori_mlxtend.py**        Valentin, Louis
+* **recommendation.py**         Vincent, Louis
+* ***src/mpd_tools***           /
+* ***challenge***               /
+* ***data***                    /
+* ***data_processed***          /
+* ***data_rules***              /  
+* DB-Schema                     Valentin, Vincent, Louis
 

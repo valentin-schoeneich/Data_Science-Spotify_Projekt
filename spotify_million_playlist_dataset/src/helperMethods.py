@@ -338,9 +338,11 @@ def getSup(itemSet, l1ItemSet2Pids):
     :param l1ItemSet2Pids:  The dictionary where the support of single items can be read
     :return:  A set of pids e.g. {'2', '3', '42'}
     """
-    if type(itemSet) not in {list, frozenset, set}:
+    if type(itemSet) not in {list, frozenset, set, tuple}:
         return l1ItemSet2Pids[frozenset([normalize_uri(itemSet)])]
     else:
+        if type(itemSet) == tuple:
+            itemSet = list(itemSet)
         if len(itemSet) == 1:   # iterable with only one element e.g. [['x']]
             return getSup(itemSet.pop(), l1ItemSet2Pids)
         else:
@@ -393,4 +395,3 @@ def printSupInfo(item):
     support['percentageCumulative'] = support['percentage'].cumsum()
     print(support)
     print("Support mean: ", support['mulSup'].sum() / support['countSup'].sum())
-
