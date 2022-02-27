@@ -252,8 +252,9 @@ def getL1ItemSet2ValuesFromCSV(item, value='pid', minSup=2, maxFiles=1000):
         print(f'getL1ItemSet2ValuesFromCSV:\n\t- Load {filename}...', end='')
         df = readDF_from_CSV(filename)
     except:
+        print(f'\r\t-Error: file {filename} not found!')
         filename = f'{item}2{valueS}_1000.csv'
-        print(f'\r\t- Load {filename}...', end='')
+        print(f'\r\t-Load {filename}...', end='')
         df = readDF_from_CSV(filename)
 
     print(f" -> Done!\n\t- Convert {valueS} ...", end='')

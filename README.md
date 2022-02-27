@@ -1,5 +1,25 @@
 # <center> Data Science WS 2021/2022 <br/> Dokumentation - Lösung der AI crowd Spotify Million Playlist Dataset Challenge mittels Assoziationsanalyse
 
+**Hinweis**: Um die gezeigten Code-Ausschnitte in dieser Dokumentation auszuführen, muss ein ssh-Tunnel zur Datenbank bestehen. 
+Eventuell müssen vor Ausführen mancher Methoden auch bestimmte csv-Dateien erstellt werden. Es empiehlt sich hierzu das How-to-use zu lesen.   
+## Gliederung
+* Begrifflichkeiten   
+* Ziel
+* Preprocessing
+* Ansatz I - Vorhandenes Repository umbauen
+  * Umbau
+  * Probleme  
+* Ansatz II - Dictionaries verwenden
+  * Idee
+  * Probleme
+    * Preprocessing & Implementierung
+* Ansatz III - Libary von mlxtend verwenden    
+* Recommendation
+  * Ansätze
+* Code-Struktur und Arbeitsaufteilung
+  * Verweis auf zweites Readme
+
+
 ## Begrifflichkeiten
 Um das grundsätzliche Verständnis zum Code und dieser Dokumentation zu fördern, erläutern wir im folgenden häufig verwendete Bergriffe bzw. Variablennamen:
 * `items` = {`track_name`, `track_uri`, `artist_uri`,`album_uri`, `name` (Playlist-name), `pid`}
@@ -88,10 +108,119 @@ printSupInfo('name')
 
 Das lässt vermuten, dass die Assoziationsanalyse für diesen Bestandteil am besten funktionieren wird.
 
-
-
-
 ## Preprocessing
+Zu Beginn unserer Arbeit haben wir uns überlegt den vollständigen 33GB großen Datensatz
+vom JSON-Format in das CSV-Format zu überführen. Dies hat einerseits den Vorteil, dass der
+Speicherbedarf der CSV-Dateien wesentlich geringer ist. Im Json-Format ist eine große Menge an
+Redundanz durch Bezeichner wie "track_uri" gegeben die im CSV-Dateien nur einm einziges Mal
+im Header gespeichert sind. Der zweite Vorteil ist, dass man CSV mit einem einzigen Befehl in
+PostgreSQL Datenbanken laden kann.
+
+### DB-Schema
+Bevor wir unsere Daten transformiert haben, haben wir schrittweise ein geeignetes
+Datenbank-Schema entwickelt. Zunächst hatten wir ein Star-Schema, dass sich in der
+Nachbesprechung als ineffizient bei Abfragen herausstellte. Das Problem war, dass die
+Verknüpfungstabelle "soulOfStar" mit all ihren Attributen zu breit war und bei einer
+Länge von 66mio Zeilen zu groß war um diese schnell zu durchlaufen.
+<img src="./images/DB-Schema-v1.png" alt="DB_Schema-Version-1.png">
+Aufgrund der schlechten Performance haben wir das Schema dann überarbeitet und primär die 
+Zuordnungstabelle schmaler gebaut. Diese ist im Schema mit der n:m-Beziehung `contains`
+dargestellt und speichert eine Playlist-ID (pid), die jeweilligen `track_uri` und `pos`,
+also Position des Tracks in der Playlist.
+<img src="./images/DB-Schema-v2.png" alt="DB_Schema-Version-2.png">
+
+### Generierung CSV-Dateien
+Wir müssen also nun die JSON-Daten in 5 CSV-Dateien mit Python transformieren:
+
+* tracks
+* artists
+* albums
+* playlists
+* playlist contains tracks (im folgenden mit pConT abgekürzt)
+
+Dafür haben wir eine Funktion `csvForDb(maxFiles)` geschrieben, die `maxFiles` viele der 
+1000 JSON-Dateien konvertiert, konkateniert und in einer der fünf CSV-Dateien speichert.
+Wir lesen alle Dateien aus dem Quellordner der JSON-Dateien ein:
+
+    filenames = os.listdir(pathToData)
+    for filename in sorted(filenames, key=natural_keys):
+        if not filename.startswith('mpd.slice.') and filename.endswith(".json") or i > maxFiles:
+            break
+
+Dann rufen wir eine zweite Funktion `createDfsForDb(filename)` auf, welche die Daten in einen
+pandas Dataframe lädt. Die Funktion gibt eine Liste der fünf Dataframes zurück. Dann können
+die entsprechenden Dataframes in CSV-Dateien gespeichert werden:
+
+    for df, name in zip(createDfsForDb(filename), ["playlists", "artists", "tracks", "albums", "pConT"]):
+                saveDF2CSV(df, f'{name}_{maxFiles}.csv', mode='a', header=(i == 1))
+
+Der wichtigste Teil unserer Funktion `createDfsForDb(filename)` ist das flatten der JSON-Daten
+mit der pandas Funktion `json_normalize`. Die JSON-Dateien öffnen wir erst per File-Deskriptor
+und verarbeiten diese dann mit `json_normalize`. Als `record_path` geben wir der Funktionan,
+was wir aus der JSON-Datei flatten möchten und erhalten den Dataframe, den wir im folgenden
+eben in die fünf Dataframes umbauen und zurückgeben.
+
+    data = getDataFromJson(filename)
+    df_playlists = pd.json_normalize(
+        data,
+        record_path=['playlists'],
+        max_level=1
+    )
+
+    df_pConT = pd.json_normalize(
+        data['playlists'],
+        record_path=['tracks'],
+        meta=[
+            'pid'
+        ]
+    )
+
+Da wir nun jede Playlist eingelesen haben, existieren noch unzählige Duplikate in unseren 
+CSV-Dateien, die wir bequem mit der Funktion `df.drop_duplicates()` entfernen konnten.
+
+### CSV-Dateien in die DB laden
+Die CSV-Dateien haben wir dann sehr einfach mit z.B. folgenden Befehl in die Datenbank laden
+können:
+
+    \copy tracks FROM '/.../tracks_1000.csv' DELIMITER ',' CSV HEADER
+
+Dabei war darauf zu achten die Tabellen in der richtigen Reihenfolge zu befüllen, da manche 
+von einer anderen abhängig waren durch Fremdschlüssel-Referenzen.
+
+### Daten aus der DB abfragen
+Für unseren ersten Ansatz, den Apriori aus dem Git-Repo zu verwenden, haben wir uns eine 
+Funktion `getFromDB(maxPid)` gebaut. Diese fragt die entsprechenden Daten aus der DB ab und 
+bringt diese ins erste benötigte Input-Format für den Algorithmus. Dazu fragen wir mit folgendem
+Select `track_uri` und `pid` ab und erhalten eine Liste aus Tupeln:
+    
+    tracks = _dbReq(f'SELECT track_uri, pid FROM pcont WHERE pid<{maxPid}')
+
+Die Funktion `_dbReq` wird bei `Ansatz III - Library von mlxtend verwenden` genauer erläutert.
+        
+        playlists = []
+        unique_tracks = set()
+        playlistCounter = 0
+        record = set()
+        
+        for track in tracks:
+            if playlistCounter != track[1]:  # switch from playlist i to playlist i+1
+                playlistCounter += 1
+                playlists.append(record)
+                record = set()
+            track_uri = track[0]
+            record.add(track_uri)
+            unique_tracks.add(frozenset([track_uri]))
+            playlists.append(record)
+        return unique_tracks, playlists
+
+Dann iterieren wir über alle angefragten tracks, müssen aber wieder tracks in die korrekte
+Playlist einordnen. Deshalb haben wir auch `pid` mit ausgeben lassen und können so wieder
+erfassen welcher track zu welcher playlist gehört. Dann erstellen wir für jede Playlist ein set
+und speichern diese in eine Liste. Zusätzlich generieren wir eine Liste mit allen Tracks, die unique
+ist.
+
+
+
 ## Ansatz I - Vorhandenes Repository umbauen
 In unserem ersten Ansatz haben wir versucht ein bestehendes Repository (s. https://github.com/chonyy/apriori_python) 
 für unseren Anwendungsfall zu nutzen und dementsprechend umzubauen. 
@@ -191,7 +320,7 @@ Die **Validierung** haben wir anhand des ersten Ansatzes und einer kleinen Daten
 ```
 aprioriFromDB(maxPlaylists=300, minSup=2, kMax=2)
 ```
-Nach ca. 85 Sekunden erscheint folgendes Output im Terminal: 
+Nach ca. 85 Sekunden erscheint folgender Output im Terminal: 
 
 ```
 getUnion for k = 2 ... -> Done! 3376101 Candidates
@@ -203,7 +332,7 @@ getAboveMinSup for k = 2 ... -> Done! 19745 Tracks above minSup
 aprioriSpotify(item='track_uri', maxPid=300, minSup=2, kMax=2, b=-1, dbL1ItemSets=True)
 ```
 
-Nach ca. 4 Sekunden erscheint folgendes Output im Terminal: 
+Nach ca. 4 Sekunden erscheint folgender Output im Terminal: 
 ```
 k:  2 -> 19744 itemSets
 ```
@@ -221,21 +350,93 @@ Gegeben:
 Rechnung:
 * `getUnion()` führt 1 Mio * 1 Mio = 1 Billionen Iterationen durch und generiert 1.000.000 * 999.999 / 2 = ca. 500.000.000. 
   Danach führt `getAboveMinSup()` 500.000.000 * 1.000.000 Iterationen durch.
-* Unsere Variante führt 1 Mio * 28 * 25 = 700 Mio. Iterationen durch.
+* Unsere Variante führt 1 Mio * 28 * 25 = 700 Mio. Iterationen durch und liefert das gleiche Ergebnis.
 
 
+### Probleme & Lösungen
+Trotz der deutlichen Performance-Steigerung gab es auch für diesen Ansatz noch Optimierungsbedarf.
 
-### Implementierung
-- Dictionarys
-### Probleme
-#### I - Es werden zu viele Regeln erstellen
-#### II - Terminiert nicht für 1. Millionen Playlists
+#### I - Keine lineare Laufzeit
+
+Wir haben den Ansatz für verschieden viele Playlists getestet und uns langsam gesteigert.
+Für 10.000 Playlists benötigt das Programm ca. 4 Minuten, für 40.000 Playlists ca. 30 Minuten und für 100.000 Playlists 
+ca. 6-8 Stunden. Letzteres haben wir allerdings bei der Hälfte der Laufzeit abgebrochen.
+
+Der Ergebnisse können wie folgt reproduziert werden:
+
+**Hinweis**: Zum Zeitpunkt als das Problem aufgetreten ist, gab es die Parameter `b` und `p` noch nicht.
+Sie wurden deshalb zur Reproduktion auf -1 gesetzt.
+
+```
+aprioriSpotify(item='track_uri', maxPid=10000, minSup=2, kMax=2, b=-1, p=-1, dbL1ItemSets=True)
+aprioriSpotify(item='track_uri', maxPid=40000, minSup=2, kMax=2, b=-1, p=-1, dbL1ItemSets=True)
+aprioriSpotify(item='track_uri', maxPid=100000, minSup=2, kMax=2, b=-1, p=-1, dbL1ItemSets=True)
+```
+
+Um das Problem zu lösen haben wir zunächst analysiert, warum die Laufzeit nicht linear ansteigt.
+Wir haben festgestellt, dass die Ursache bei Tracks liegt, die einen sehr hohen Support haben.
+Wenn wir uns den oben gezeigten Screenshot nochmal ansehen, erkennt man, dass es Tracks mit einem Support von bis zu 45394 gibt.
+
+<img src="./images/sup_track_uri.png" alt="sup_track_uri.png">
+
+Außer diesem Track gibt es natürlich noch viele weitere Tracks für die jeweils über tausende Playlists iteriert werden muss.
+Der Grund für den nicht-linearen Zeitaufwand liegt also daran, dass für einen größen Datensatz der durchschnittliche Support von items steigt.
+
+Wir haben deshalb beschlossen, einen weiteren Parameter `p` einzuführen, der die Anzahl an Iterationen für ein einzelnes itemSet limitiert.
+
+Ein Test hat gezeigt, dass Laufzeit nun eher linear ist:
+```
+aprioriSpotify(item='track_uri', maxPid=20000, minSup=2, kMax=2, b=-1, p=10, dbL1ItemSets=True)
+```
+
+**Dauer:** 2 min. 16 Sekunden für 101.431 Tracks (Gesamt: 2.262.292 Tracks) 
+
+```
+aprioriSpotify(item='track_uri', maxPid=40000, minSup=2, kMax=2, b=-1, p=10, dbL1ItemSets=True)
+```
+
+**Dauer:** 4 min. 9 Sekunden für 164.664 Tracks (Gesamt: 2.262.292 Tracks) 
+
+Es ist logisch, dass wir damit noch immer keine lineare Komplexität erreichen. Denn umso größer der Testdatensatz wird, umso mehr items wird es geben, die die Grenze von `p` Playlists voll ausschöpfen.
+Ist der Datensatz kleiner, gibt es viele items, die die Grenze von `p` nicht erreichen und somit entstehen noch weniger Iterationen.
+Dennoch haben wir damit eine deutliche Verbesserung erzielt, die ein Durchlaufen für 1 Mio. Playlists ermöglicht hat.
+
+Man könnte sich nun fragen, ob dadurch wichtige Vereinigungen nicht gebildet werden können und damit gute Regeln verloren gehen.
+Tatsächlich ist es aber in unserem Fall so, dass wir damit ein besseres Ergebnis erzielt haben.
+Dafür gibt es zwei Gründe:
+1. **Die "guten" Vereinigungen fallen wahrscheinlich nicht weg.**  
+   Die "guten" Vereinigungen (bzw. später die Regeln) sind die, dessen Support möglichst nahe an den Support von einem einzelnen itemSet herankommen.
+   Das ist genau dann der Fall, wenn das zweite itemSet in vielen Playlists vom ersten itemSet vorkommt.
+   Da wir mit `sets` arbeiten, sind die `p` Playlists zufällig. Wenn wir nun mit itemSets aus `p` Playlists Vereinigungen bilden, ist es wahrscheinlich, dass wir Vereinigungen mit itemSets bilden, die ein hohes Vorkommen aufweisen.  
+   **Beispiel:**  
+   - itemSet1 hat einen Support von 42.
+   - itemSet2 kommt in 21 Playlists von itemSet1 vor, d.h. der Support der Vereinigung beträgt 21.
+   - Die Konfidenz der Regel itemSet1 -> itemSet2 liegt damit bei 50%
+   - Nun iterieren wir durch 10 zufällige Playlists der 42 Playlists und bilden Vereinigungen
+   - Die Wahrscheinlichkeit bei 10 Durchläufen **nicht** auf itemSet2 zu stoßen, liegt bei:  
+     21/42 * 20/41 * 19/40 * 18/39 * 17/38 *...   
+     = `(math.factorial(21) / math.factorial(21-10)) / (math.factorial(42) / math.factorial(42-10)) * 100`  
+     = 0,02 %
+   - Dementsprechend liegt die Wahrscheinlichkeit bei 99,98 % in 10 Schleifendurchläufen auf itemSet2 zu stoßen.
+    
+    Je kleiner der Support eines itemSets ist, desto Wahrscheinlicher reichen `p` Schleifendurchläufe aus um alle Vereinigungen über `minSup` zu finden.  
+    Je größer der Support eines itemSets ist, desto mehr konvergiert die Formel für die Berechnung der Wahrscheinlichkeit `1 - pow(conf, p)`.
+    Dementsprechend liegt die geringste Wahrscheinlichkeit alle "guten" Vereinigungen zu finden für `minConf=0.5` und `p=10` bei 99,90 %.
+    
+    
+2. **In Verbindung mit `b` gibt es weniger Überschneidung**  
+  
+  
+    
+    
+   
+   
+
+
+#### II - Es werden zu viele Regeln erstellt
 #### III - Datenbank-Abfrage dauert zu lange
-### Lösungen
-#### I
-#### II
-#### III
-## Ansatz III - Library von mlxtend verwenden 
+
+## Ansatz III - Library von mlxtend verwenden
 Um eine Assoziationsanalyse über unsere Spotofy Daten durchzuführen liegt es
 Nahe eine Library zu verwenden, welche die benötigte Funktionalität bereits 
 bereitstellt. Wir sind dabei auf Library mlxtend gestoßen, die z.B. Apriori [1] und Funktionen
@@ -350,10 +551,9 @@ zur Folge, dass der Algorithmus 3-6x länger braucht aber Speicher-schonend arbe
 Bei 100.000 Plylists war dann selbst mit `low_memory=True` und `max_len=2` der Arbeitsspeicher
 derat ausgelastet, dass das Program mit Swapping beginnen musste.
 
-### Referenzen zu mlxtend
+### References
 [1] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/apriori/ \
 [2] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/association_rules/
-
 ## Recommendation
 ## Code-Struktur
 * **preprocessingToCSV.py**
