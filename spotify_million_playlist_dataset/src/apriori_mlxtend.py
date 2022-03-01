@@ -8,8 +8,9 @@ import pandas as pd
 Approach to use a library to generate association rules:
 https://rasbt.github.io/mlxtend/user_guide/frequent_patterns/association_rules/
 ************************
- 
 '''
+
+
 def apriori1():
     dataset = getC1ItemSets('track_uri', 100)  # Doesnt even work for 100 playlists and minSup 0.02
     lenUniqueTracks = getNumUniqueItems('track_uri', 100)
@@ -25,7 +26,6 @@ def apriori1():
         antecedents.add(antecedent)
     print(rules['antecedents'])
     print(f"{len(antecedents)} antecedents from {lenUniqueTracks} ({round(len(antecedents) / lenUniqueTracks * 100, 2)}%)")
-
 
 
 def apriori2():

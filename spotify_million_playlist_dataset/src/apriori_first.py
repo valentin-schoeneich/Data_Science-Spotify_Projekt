@@ -151,5 +151,4 @@ def aprioriFromDB(maxPlaylists, minSup, minConf=0.5, kMax=2):
     return globalFreqTrackSet, rules
 
 
-aprioriFromDB(maxPlaylists=300, minSup=2, kMax=2)
 

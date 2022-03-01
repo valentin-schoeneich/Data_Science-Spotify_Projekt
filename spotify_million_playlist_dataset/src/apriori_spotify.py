@@ -40,16 +40,16 @@ def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1
     maxFiles = (maxPid - 1) // 1000 + 1
     checkParamItem('aprioriSpotify', item)
     if dbL1ItemSets:    # get l1ItemSets from db
-        numUniqueItems = 1 # getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
         l1Pid2ItemSets = getL1Pid2ItemSets(item, maxPid, minSup)
         l1ItemSet2Pids = getL1ItemSet2Pids(item, maxPid, minSup)
     else:   # get l1ItemSets from csv-file
         maxPid = maxFiles * 1000
-        numUniqueItems = 1 #getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
+        numUniqueItems = getNumUniqueItems(item, maxPid)  # calculation may take longer than the ssh tunnel exists
         l1ItemSet2Pids = getL1ItemSet2ValuesFromCSV(item=item, minSup=minSup, maxFiles=maxFiles)
         l1Pid2ItemSets = getL1Pid2ItemSetsFromDict(l1ItemSet2Pids)  # this one is faster
 
-    print(f"k: 1 -> {len(l1ItemSet2Pids)} items {round(len(l1ItemSet2Pids) / numUniqueItems * 100, 2)}%)")
+    print(f"k: 1 -> {len(l1ItemSet2Pids)} items ({round(len(l1ItemSet2Pids) / numUniqueItems * 100, 2)}%)")
     currentItemSet2Pids = l1ItemSet2Pids
     currentPid2ItemSets = l1Pid2ItemSets
 
@@ -57,12 +57,13 @@ def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1
         currentItemSet2Pids, currentPid2ItemSets = getNextItemSets(currentItemSet2Pids, currentPid2ItemSets,
                                                                    minSup, k, b, p)
         print("k: ", k, "->", len(currentItemSet2Pids), "itemSets")
+        print("AVG-Support: ", sum(list(map(len, currentItemSet2Pids.values()))) / len(currentItemSet2Pids))
         allRules.extend(associationRules(l1ItemSet2Pids, currentItemSet2Pids, minConf))
     if saveRules:
         saveAndSortRules(allRules, f'{maxFiles}_{item}2{item}.csv')
 
 
-def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2):
+def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2, saveRules=False):
     """
     Saves rules of the form "playlist-name (short pname),consequents,confidence,supPname" into a csv-file.
     :param consequents: The consequent of the rules of the form "pname -> consequent, confidence"
@@ -89,8 +90,8 @@ def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2):
             if confidence > minConf:
                 rules.append([pname, item, confidence, len(pidsPname)])
         countProgress += 1
-
-    saveAndSortRules(rules, f'{maxFiles}_name2{consequents}.csv')
+    if saveRules:
+        saveAndSortRules(rules, f'{maxFiles}_name2{consequents}.csv')
 
 
 def getNextItemSets(currItemSet2Pids, currPid2ItemSets, minSup, k, b, p):
@@ -260,5 +261,6 @@ def saveAndSortRules(rules, filename):
     print("Total antecedents: ", len(antecedents))
 
 
-aprioriSpotify(item='track_uri', maxPid=20000, minSup=2, kMax=2, b=-1, p=10, dbL1ItemSets=False)
+
+
 

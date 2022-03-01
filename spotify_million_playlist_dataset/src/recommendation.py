@@ -1,9 +1,9 @@
 import pandas as pd
-from helperMethods import readDF_from_CSV, getDataFromJson, normalize_name, appendList, normalize_uri, saveDF2CSV
+from helperMethods import readDF_from_CSV, getDataFromJson, normalize_name, appendList, normalize_uri, saveDF2CSV, Path
 import statistics
 import pandas as pd
 
-submission = list() # list with all prediction entries
+submission = list()  # list with all prediction entries
 
 
 def getRuleDict(filename):
@@ -13,7 +13,7 @@ def getRuleDict(filename):
     :return         dictionary
     """
     print(f"Load {filename}...", end='')
-    df = readDF_from_CSV(filename, path='../data_rules/') # create dataframe
+    df = readDF_from_CSV(filename, path=Path.pathToRules.value)  # create dataframe
     # create entry with a list who includes consequents and confidences
     df['rule'] = df[['consequent', 'confidence']].values.tolist()
     # all rules group by antecedent
@@ -40,8 +40,8 @@ def getMostPopular(filename):
     :return:            Union with a list and a dictionary
     """
     print(f"Load {filename}...", end='')
-    #creates dataframe from csv file
-    df = readDF_from_CSV(filename, path='../data_rules/')
+    # creates dataframe from csv file
+    df = readDF_from_CSV(filename, path=Path.pathToRules.value)
     if len(df.columns) == 1:
         return df['0'].tolist()
 
@@ -51,11 +51,11 @@ def getMostPopular(filename):
     return {row['0']: row['1'] for index, row in df.iterrows()}
 
 
-def myUpdate(consDict, extensionDict): # Add content from extension dictionary
+def myUpdate(consDict, extensionDict):  # Add content from extension dictionary
     for key in extensionDict:
-        if key in consDict: # if both have the key use the one with the larger value
+        if key in consDict:  # if both have the key use the one with the larger value
             consDict[key] = max(consDict[key], extensionDict[key])
-        else: # add the new entry to consDict
+        else:  # add the new entry to consDict
             consDict[key] = extensionDict[key]
 
 
@@ -131,13 +131,14 @@ def recommendation():
                 which creates a CSV submission file with predictions for all playlists.
     """
     # calling the getDataFromJson helper method, which creates a dataframe from the challenge_set.json file
-    mpd_slice = getDataFromJson(filename="challenge_set.json", path='../')
-    #create variables for the most popular songs from all artist and albums
+    mpd_slice = getDataFromJson(filename="challenge_set.json", path=Path.pathToChallenge.value)
+    # create variables for the most popular songs from all artist and albums
     album2mostPopular = getMostPopular("album_uri2track_uris_sorted.csv")
+    print(album2mostPopular)
     artist2mostPopular = getMostPopular("artist_uri2track_uris_sorted.csv")
-    #variable with most popular tracks
+    # variable with most popular tracks
     mostPopularTracks = getMostPopular("mostPopularTracks.csv")
-    #dictonaries for different attribute types
+    # dictonaries for different attribute types
     pname2track, track2track = getRuleDicts('track_uri')
     pname2artist, artist2artist = getRuleDicts('artist_uri')
     pname2album, album2album = getRuleDicts('album_uri')
@@ -146,8 +147,9 @@ def recommendation():
     count = 0
     x1 = 0
     x2 = 0
-    lenPredictions = list()
-    for playlist in mpd_slice['playlists']: # iterates through all challenge playlists
+    lenPredictions1 = list()
+    lenPredictions2 = list()
+    for playlist in mpd_slice['playlists']:  # iterates through all challenge playlists
         print(count)
         # Method to detect the scenario. Returns the scenario number
         szenario = checkSzenario(playlist)
@@ -169,17 +171,20 @@ def recommendation():
         myUpdate(albumPred, predForTrack(tracks, album2album, 'album_uri', givenTracks))
         myUpdate(artistPred, predForTrack(tracks, artist2artist, 'artist_uri', givenTracks))
         myUpdate(trackPred, predForTrack(tracks, track2track, 'track_uri', givenTracks))
+        lenPredictions1.append(len(trackPred))
         # if no predictions are found, the top 500 tracks from all playlists are used as predictions
         if len(trackPred) == 0 and len(albumPred) == 0 and len(artistPred) == 0:
             print("Found", len(trackPred), "predictions for playlist:", playlist)
             myUpdate(trackPred, {track: 0 for track in mostPopularTracks[0:500]})
             incomplete += 1
-        for i in range(0, 4): # fill predictions
+        for i in range(0, 4):  # fill predictions
             kmax = (500 - len(trackPred)) // max(len(albumPred) + len(artistPred), 1)
             # fill track prediction wit most popular tracks from artist and album predictions
             addPopular(trackPred, albumPred, album2mostPopular, kmax, givenTracks)
             addPopular(trackPred, artistPred, artist2mostPopular, kmax, givenTracks)
-            if len(trackPred) >= 500: # enough predictions
+            if i == 0:
+                lenPredictions2.append(len(trackPred))
+            if len(trackPred) >= 500:  # enough predictions
                 x1 += 1
                 break
             # new item prediction
@@ -187,7 +192,7 @@ def recommendation():
             artistPred.update(predForItem(artistPred, artist2artist, givenTracks))
             trackPred.update(predForItem(trackPred, track2track, givenTracks))
 
-            if len(trackPred) >= 500: # enough predictions
+            if len(trackPred) >= 500:  # enough predictions
                 x2 += 1
                 break
         # # if not enough predictions are found
@@ -200,13 +205,15 @@ def recommendation():
             i += 1
 
         count += 1
-        lenPredictions.append(len(trackPred))
+
         # call method to save predictions
-        saveAndSortPredictions(trackPred, count == 10000, playlist['pid'])
+        #saveAndSortPredictions(trackPred, count == 10000, playlist['pid'])
 
     print(f'{incomplete} incomplete from {count}')
-    print("Avg: ", statistics.mean(lenPredictions))
-    print("max: ", max(lenPredictions))
+    print("Avg 1: ", statistics.mean(lenPredictions1))
+    print("Avg median 1: ", statistics.median(lenPredictions1))
+    print("Avg 2: ", statistics.mean(lenPredictions2))
+    print("Avg median 2: ", statistics.median(lenPredictions2))
     print("x1:", x1, "x2:", x2)
 
 
@@ -218,15 +225,16 @@ def saveAndSortPredictions(trackPred, finish, pid):
         :return:            No return value, but creates CSV-File if called last time
         """
     tracks = list(trackPred.keys())
-    tracks.sort(key=lambda x: trackPred[x], reverse=True) #sort the tracks
-    row = [pid] # new list with pid as the first entry
-    row.extend(tracks[0:500]) # append the sorted predictions
-    submission.append(row) # append playlist prediction to the global submission list
-    if finish: # if all playlist predicted create submission file
+    tracks.sort(key=lambda x: trackPred[x], reverse=True)  # sort the tracks
+    row = [pid]  # new list with pid as the first entry
+    row.extend(tracks[0:500])  # append the sorted predictions
+    submission.append(row)  # append playlist prediction to the global submission list
+    if finish:  # if all playlist predicted create submission file
         df = pd.DataFrame(submission)
         saveDF2CSV(df, 'submission.csv', path='../', header=False)
 
-def validateSzenarios(): #just to check the correct number of scenarios
+
+def validateSzenarios():  # just to check the correct number of scenarios
     szenarios = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, -1: 0}
     mpd_slice = getDataFromJson(filename="challenge_set.json", path='../')
     for playlist in mpd_slice["playlists"]:
@@ -263,4 +271,6 @@ def checkSzenario(playlist):
             i += 1
         return 9  # Title and first 100 tracks
     return -1
+
+
 recommendation()
