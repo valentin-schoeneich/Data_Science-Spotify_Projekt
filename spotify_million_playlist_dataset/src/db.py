@@ -260,4 +260,3 @@ def dbValidate():
     print("number of unique albums", str(resp[3])[2:-3])
     print("number of unique artists", str(resp[4])[2:-3])
     print("number of unique titles", str(resp[5])[2:-3])
-

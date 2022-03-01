@@ -4,10 +4,17 @@ from progressBar import *
 import os
 import json
 from itertools import chain, combinations
+from enum import Enum
 
 validItems = {'track_name', 'track_uri', 'artist_uri', 'album_uri', 'name', 'pid'}
-pathToProcessedData = '../data_processed/'
-pathToData = '../data/'
+
+
+class Path(Enum):
+    pathToData = '../data/'
+    pathToProcessedData = '../data_processed/'
+    pathToRules = '../data_rules/'
+    pathToChallenge = '../challenge/'
+
 
 '''
 *************************************
@@ -62,7 +69,7 @@ def createDfsForDb(filename):
     return [df_playlists, df_artist, df_tracks, df_album, df_pConT]
 
 
-def getDataFromJson(filename, path=pathToData):
+def getDataFromJson(filename, path=Path.pathToData.value):
     """
     :param path:
     :param filename: The filename of the current json-file
@@ -79,7 +86,7 @@ def getJsonFiles():
     """
     :return: Returns a list of files in the folder defined by pathToData
     """
-    return os.listdir(pathToData)
+    return os.listdir(Path.pathToData.value)
 
 
 def makeCSVUnique(filename):
@@ -89,9 +96,9 @@ def makeCSVUnique(filename):
     :return: Nothing, only edits and saves the specified csv-file
     """
     print('dropping duplicates in ' + filename)
-    df = pd.read_csv(f'{pathToProcessedData}{filename}.csv')
+    df = pd.read_csv(f'{Path.pathToProcessedData.value}{filename}.csv')
     df = df.drop_duplicates()
-    df.to_csv(f'{pathToProcessedData}{filename}.csv', index=False)
+    df.to_csv(f'{Path.pathToProcessedData.value}{filename}.csv', index=False)
 
 
 '''
@@ -197,15 +204,15 @@ def createIndexForCSV(filename):
     :param filename: Name of the file.
     :return: Nothing, only edits and saves the file
     """
-    df = pd.read_csv(f'{pathToProcessedData}{filename}.csv')
-    df.to_csv(f'{pathToProcessedData}{filename}.csv')
+    df = pd.read_csv(f'{Path.pathToProcessedData.value}{filename}.csv')
+    df.to_csv(f'{Path.pathToProcessedData.value}{filename}.csv')
 
 
-def saveDF2CSV(df, filename, mode='w', index=False, header=True, path=pathToProcessedData):
+def saveDF2CSV(df, filename, mode='w', index=False, header=True, path=Path.pathToProcessedData.value):
     df.to_csv(f'{path}{filename}', mode=mode, index=index, header=header)
 
 
-def readDF_from_CSV(filename, path=pathToProcessedData):
+def readDF_from_CSV(filename, path=Path.pathToProcessedData.value):
     return pd.read_csv(f'{path}{filename}')
 
 
@@ -265,43 +272,6 @@ def getL1ItemSet2ValuesFromCSV(item, value='pid', minSup=2, maxFiles=1000):
     df[item] = df[item].apply(lambda x: frozenset([x]))
     print(" -> Done!")
     return {row[item]: row[valueS] for index, row in df.iterrows()}
-
-
-def getL1Pid2ItemSetsFromCSV(item, maxFiles=1000):
-    """
-    Slower then getL1Pid2ItemSetsFromDict()
-    :param item: Will be the value of the dictionary
-    :param maxFiles: Can be used to load a smaller file
-    :return: A dictionary that lists for each pid all items. It is of the form:
-                {
-                    pid: {frozenset({'item', 'item', ...}), ...}
-                    ...
-                }
-                e.g. with item = track_uri
-                {
-                    5: {frozenset({'spotify:track:5Q0Nhxo0l2bP3pNjpGJwV1'}),
-                        frozenset({'spotify:track:0XUfyU2QviPAs6bxSpXYG4'})
-                        ...},
-                    0: {frozenset({'spotify:track:3H1LCvO3fVsK2HPguhbml0'}),
-                        frozenset({'spotify:track:0XUfyU2QviPAs6bxSpXYG4'})
-                        ...},
-                    ...
-                }
-    """
-    try:
-        filename = f'pid2{item}s_{maxFiles}.csv'
-        print(f'getL1Pid2ItemSetsFromCSV:\n\t- Load {filename}...', end='')
-        df = readDF_from_CSV(filename)
-    except:
-        filename = f'pid2{item}s_1000.csv'
-        print(f'\r\t- Load {filename}...', end='')
-        df = readDF_from_CSV(filename)
-    print(" -> Done!\n\t- Convert items to frozensets...", end='')
-    df['items'] = df['items'].apply(lambda x: {frozenset([y]) for y in appendSet(x)})
-    print(" -> Done!\n\t- Convert pid to int...", end='')
-    df['pid'] = df['pid'].apply(lambda x: int(x[1:-1]))
-    print(" -> Done!")
-    return {row['pid']: row['items'] for index, row in df.iterrows()}
 
 
 def getL1Pid2ItemSetsFromDict(l1ItemSet2Pids):
@@ -395,3 +365,42 @@ def printSupInfo(item):
     support['percentageCumulative'] = support['percentage'].cumsum()
     print(support)
     print("Support mean: ", support['mulSup'].sum() / support['countSup'].sum())
+
+
+'''
+def getL1Pid2ItemSetsFromCSV(item, maxFiles=1000):
+    """
+    Slower then getL1Pid2ItemSetsFromDict()
+    :param item: Will be the value of the dictionary
+    :param maxFiles: Can be used to load a smaller file
+    :return: A dictionary that lists for each pid all items. It is of the form:
+                {
+                    pid: {frozenset({'item', 'item', ...}), ...}
+                    ...
+                }
+                e.g. with item = track_uri
+                {
+                    5: {frozenset({'spotify:track:5Q0Nhxo0l2bP3pNjpGJwV1'}),
+                        frozenset({'spotify:track:0XUfyU2QviPAs6bxSpXYG4'})
+                        ...},
+                    0: {frozenset({'spotify:track:3H1LCvO3fVsK2HPguhbml0'}),
+                        frozenset({'spotify:track:0XUfyU2QviPAs6bxSpXYG4'})
+                        ...},
+                    ...
+                }
+    """
+    try:
+        filename = f'pid2{item}s_{maxFiles}.csv'
+        print(f'getL1Pid2ItemSetsFromCSV:\n\t- Load {filename}...', end='')
+        df = readDF_from_CSV(filename)
+    except:
+        filename = f'pid2{item}s_1000.csv'
+        print(f'\r\t- Load {filename}...', end='')
+        df = readDF_from_CSV(filename)
+    print(" -> Done!\n\t- Convert items to frozensets...", end='')
+    df['items'] = df['items'].apply(lambda x: {frozenset([y]) for y in appendSet(x)})
+    print(" -> Done!\n\t- Convert pid to int...", end='')
+    df['pid'] = df['pid'].apply(lambda x: int(x[1:-1]))
+    print(" -> Done!")
+    return {row['pid']: row['items'] for index, row in df.iterrows()}
+'''

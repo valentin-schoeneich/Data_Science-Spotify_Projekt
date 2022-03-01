@@ -63,7 +63,7 @@ def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1
         saveAndSortRules(allRules, f'{maxFiles}_{item}2{item}.csv')
 
 
-def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2):
+def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2, saveRules=False):
     """
     Saves rules of the form "playlist-name (short pname),consequents,confidence,supPname" into a csv-file.
     :param consequents: The consequent of the rules of the form "pname -> consequent, confidence"
@@ -90,8 +90,8 @@ def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2):
             if confidence > minConf:
                 rules.append([pname, item, confidence, len(pidsPname)])
         countProgress += 1
-
-    saveAndSortRules(rules, f'{maxFiles}_name2{consequents}.csv')
+    if saveRules:
+        saveAndSortRules(rules, f'{maxFiles}_name2{consequents}.csv')
 
 
 def getNextItemSets(currItemSet2Pids, currPid2ItemSets, minSup, k, b, p):
@@ -261,7 +261,6 @@ def saveAndSortRules(rules, filename):
     print("Total antecedents: ", len(antecedents))
 
 
-aprioriSpotify(item='track_uri', maxPid=100000, minSup=2, kMax=2, b=-1, p=-1, dbL1ItemSets=False)
 
 
 

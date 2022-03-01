@@ -90,43 +90,6 @@ def csvItem2Values(maxFiles, keys, values='pid', minSup=1):
             print(item, "-> oldlen: ", oldLen, "newlen:", len(df[item]))
 
 
-'''
-def csvPid2ItemsFromCSV(maxFiles, items):
-    """
-    This method is not very useful, because it is faster the generate the pid2ItemsDict with the method
-    getL1Pid2ItemSetsFromDict() then to call getL1Pid2ItemSetsFromCSV() witch would use the file created by this
-    method.
-    Works like csvItem2Values but generates the csv-file from current csv-file instead of a json-file.
-    For that reason csvItem2Values have to be called first with the parameters
-    (maxFiles=maxFiles, keys=items, values='pid', minSup=whatever you want to work with. Suggested 1)
-    :param maxFiles: Only needed to find and save the right file
-    :param items: Set of items for which a csv-file should be created. Is also used to find the right file
-    :return: Nothing, but creates a csv-file on the folder defined in helperMethods
-                The file is of the form:
-                    pid,"{'item1', 'item2', ...}"
-                E.g. items = {'track_uri'}
-                    295,"{'spotify:track:3NhbibAeeuBMArKoFYQ2Vd', 'spotify:track:4mKGSQxJk5mKOlMmMnW6gx', ...}"
-                    ...
-    """
-    items = checkParamItems("csvPid2Items", items)
-    for item in items:
-        filename = f'{item}2Pids_{maxFiles}.csv'
-        df = readDF_from_CSV(filename)
-        print(filename)
-        # get all unique pids
-        pids = append(df['pids'])
-        pid2Items = {pid: set() for pid in pids}
-
-        for index, row in df.iterrows():
-            for pid in row['pids'][1:-1].split(', '):
-                pid2Items[pid.replace("'", "")].add(row[item])
-        df_pid2Items = pd.DataFrame()
-        df_pid2Items['pid'] = pid2Items.keys()
-        df_pid2Items['items'] = pid2Items.values()
-        saveDF2CSV(df_pid2Items, f'pid2{item}s_{maxFiles}.csv')
-'''
-
-
 def savePopularTracks(maxFiles):
     """
     Before use, call
@@ -178,12 +141,50 @@ def createFiles():
     :return: Nothing, only calls methods
     """
     # For testing
-    csvItem2Values(2, 'name', {'track_uri', 'album_uri', 'artist_uri', 'pid'})
-    csvItem2Values(2, {'track_uri', 'album_uri', 'artist_uri'}, 'pid')
-    csvItem2Values(2, {'album_uri', 'artist_uri'}, 'track_uri')
+    csvItem2Values(maxFiles=2, keys={'track_uri', 'album_uri', 'artist_uri'}, values='pid', minSup=1)
+    csvItem2Values(maxFiles=2, keys='name', values={'track_uri', 'album_uri', 'artist_uri', 'pid'}, minSup=1)
+    csvItem2Values(maxFiles=2, keys={'album_uri', 'artist_uri'}, values='track_uri', minSup=1)
     # For final prediction / rule-calculation
-    csvItem2Values(1000, 'name', {'track_uri', 'album_uri', 'artist_uri', 'pid'})
-    csvItem2Values(1000, {'track_uri', 'album_uri', 'artist_uri'}, 'pid')
-    csvItem2Values(1000, {'album_uri', 'artist_uri'}, 'track_uri')
+    csvItem2Values(maxFiles=1000, keys={'track_uri', 'album_uri', 'artist_uri'}, values='pid', minSup=1)
+    csvItem2Values(maxFiles=1000, keys='name', values={'track_uri', 'album_uri', 'artist_uri', 'pid'}, minSup=1)
+    csvItem2Values(maxFiles=1000, keys={'album_uri', 'artist_uri'},  values='track_uri', minSup=1)
     savePopularTracks(1000)
+
+
+'''
+def csvPid2ItemsFromCSV(maxFiles, items):
+    """
+    This method is not very useful, because it is faster the generate the pid2ItemsDict with the method
+    getL1Pid2ItemSetsFromDict() then to call getL1Pid2ItemSetsFromCSV() witch would use the file created by this
+    method.
+    Works like csvItem2Values but generates the csv-file from current csv-file instead of a json-file.
+    For that reason csvItem2Values have to be called first with the parameters
+    (maxFiles=maxFiles, keys=items, values='pid', minSup=whatever you want to work with. Suggested 1)
+    :param maxFiles: Only needed to find and save the right file
+    :param items: Set of items for which a csv-file should be created. Is also used to find the right file
+    :return: Nothing, but creates a csv-file on the folder defined in helperMethods
+                The file is of the form:
+                    pid,"{'item1', 'item2', ...}"
+                E.g. items = {'track_uri'}
+                    295,"{'spotify:track:3NhbibAeeuBMArKoFYQ2Vd', 'spotify:track:4mKGSQxJk5mKOlMmMnW6gx', ...}"
+                    ...
+    """
+    items = checkParamItems("csvPid2Items", items)
+    for item in items:
+        filename = f'{item}2Pids_{maxFiles}.csv'
+        df = readDF_from_CSV(filename)
+        print(filename)
+        # get all unique pids
+        pids = append(df['pids'])
+        pid2Items = {pid: set() for pid in pids}
+
+        for index, row in df.iterrows():
+            for pid in row['pids'][1:-1].split(', '):
+                pid2Items[pid.replace("'", "")].add(row[item])
+        df_pid2Items = pd.DataFrame()
+        df_pid2Items['pid'] = pid2Items.keys()
+        df_pid2Items['items'] = pid2Items.values()
+        saveDF2CSV(df_pid2Items, f'pid2{item}s_{maxFiles}.csv')
+'''
+
 
