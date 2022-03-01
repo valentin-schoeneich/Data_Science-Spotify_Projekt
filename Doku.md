@@ -21,8 +21,6 @@ Zudem müssen zum Ausführen mancher Methoden zuvor bestimmte CSV-Dateien erstel
 * Recommendation
 * Mitwirken der Teammitglieder
 
-
-
 ## Begrifflichkeiten
 Um das grundsätzliche Verständnis zum Code und dieser Dokumentation zu fördern, erläutern wir im folgenden häufig verwendete Bergriffe bzw. Variablennamen:
 * `items` = {`track_name`, `track_uri`, `artist_uri`,`album_uri`, `name` (Playlist-name), `pid`}
