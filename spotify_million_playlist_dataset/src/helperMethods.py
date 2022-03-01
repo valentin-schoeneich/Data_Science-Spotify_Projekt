@@ -356,10 +356,6 @@ def printSupInfo(item):
     df = readDF_from_CSV(f'{item}2Pids_1000.csv')
     df['support'] = df['pids'].apply(lambda pids: len(pids[1:-1].split(', ')))
     support = df.groupby('support')[item].apply(lambda x: len(x)).reset_index(name='countSup')
-    # insert row on first line because items with support = 1 wasn't considered by csvItems2Pid to safe memory
-    support.loc[-1] = [1, item2NumUnique[item] - len(df[item])]
-    support.index = support.index + 1
-    support = support.sort_index()
     support['mulSup'] = support['support'] * support['countSup']
     support['percentage'] = support['countSup'] / item2NumUnique[item] * 100
     support['percentageCumulative'] = support['percentage'].cumsum()
@@ -404,3 +400,6 @@ def getL1Pid2ItemSetsFromCSV(item, maxFiles=1000):
     print(" -> Done!")
     return {row['pid']: row['items'] for index, row in df.iterrows()}
 '''
+
+
+printSupInfo('name')

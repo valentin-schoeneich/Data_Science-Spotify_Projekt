@@ -198,7 +198,8 @@ def getC1ItemSets(item, maxPid):
 def getCountSup(item, maxPid):
     """
     This method can be used to decide which item should be used and to get a indication for choosing minSup.
-    Unfortunately, it doesn't work well for large inputs like maxPid = 200.000
+    Unfortunately, it doesn't work well for large inputs like maxPid = 200.000. For these dimensions of input,
+    use printSupInfo() in helperMethods.py
     :param item:    The item for which the sql-query is searching for. E.g track_uri or artist_uri.
     :param maxPid:  Maximum size of playlists for where-clause
     :return:    For each support the number of items and the average support for this item.

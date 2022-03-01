@@ -101,7 +101,7 @@ For a full recommendation take a look at the next chapter.
     csvItem2Values(maxFiles=maxFiles, keys='name', values={{consequents}, 'pid'}, minSup=1)
     csvItem2Values(maxFiles=maxFiles, keys={consequents}, values='pid', minSup=1)
     ```
-4.  `getL1ItemSet2ValuesFromCSV(item, value, maxFiles)` in **helperMethods.py**
+4.  `getL1ItemSet2ValuesFromCSV(item, value, maxFiles)` in **helperMethods.py**  
     Following file in **data_processed/** required:
     - {**item**}2{**value**}_{**maxFiles**}.csv
     
