@@ -1011,7 +1011,7 @@ Diese Methode nutzen wir zum Überprüfen in welchem Szenario sich eine Playlist
 ### References
 [1] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/apriori/  
 [2] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/association_rules/  
-[3] https://github.com/chonyy/apriori_python
+[3] https://github.com/chonyy/apriori_python  
 [4] Foliensatz "Recommender Systeme" S. 29 - Erweiterung Apriori-TID)
 
 
