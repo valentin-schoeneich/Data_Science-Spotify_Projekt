@@ -277,7 +277,7 @@ def getL1ItemSet2ValuesFromCSV(item, value='pid', minSup=2, maxFiles=1000):
 def getL1Pid2ItemSetsFromDict(l1ItemSet2Pids):
     """
     Returns the same like getL1Pid2ItemSetsFromCSV() but instead of generating the dict by a csv-file, the csv-file
-    will be created by a dictionary l1ItemSet2Pids
+    will be created by a dictionary l1ItemSet2Pids. Can be faster than loading a csv-file.
     :param l1ItemSet2Pids: Could be created by getL1ItemSet2ValuesFromCSV() or db.getL1ItemSet2Pids().
     :return: Defined in getL1Pid2ItemSetsFromCSV()
     """
@@ -313,7 +313,7 @@ def getSup(itemSet, l1ItemSet2Pids):
     else:
         if type(itemSet) == tuple:
             itemSet = list(itemSet)
-        if len(itemSet) == 1:   # iterable with only one element e.g. [['x']]
+        if len(itemSet) == 1:  # iterable with only one element e.g. [['x']]
             return getSup(itemSet.pop(), l1ItemSet2Pids)
         else:
             return _getSupFromIterable(itemSet, l1ItemSet2Pids)
@@ -344,6 +344,8 @@ def _getSupFromIterable(itemSet, l1ItemSet2Pids):
 def printSupInfo(item):
     """
     Prints infos about the support of an item which can be used for analysis
+    Before use, call preprocessingToCSV.csvItem2Values() with parameters:
+    (maxFiles=maxFiles, keys=item, values='pid', minSup=1):
     :param item: The items for which the support should be counted. Defined in helperMethod.validItems
     :return: Nothing, print only
     """
@@ -400,6 +402,3 @@ def getL1Pid2ItemSetsFromCSV(item, maxFiles=1000):
     print(" -> Done!")
     return {row['pid']: row['items'] for index, row in df.iterrows()}
 '''
-
-
-printSupInfo('name')

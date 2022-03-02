@@ -108,7 +108,7 @@ def getL1ItemSet2Pids(item, maxPid, minSup):
     :param item:            The item for which the sql-query is searching for. E.g track_uri or artist_uri.
     :param maxPid:          Number of playlists that limits the load of data. Can be used for faster testing
                             or to free up the memory
-    :param minSup:   Specifies the minimum number of playlists the track must appear in
+    :param minSup:   Specifies the minimum number of playlists the item must appear in.
     :return:    A dictionary that lists for each itemSet above minSup the playlists it appears in. In this case
                 of l1ItemSet, every itemSet have the same length = 1
                 The return value of the dictionary is of the form:

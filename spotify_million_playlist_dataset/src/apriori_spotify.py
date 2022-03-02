@@ -9,13 +9,13 @@ def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1
     """
     Main method of this file. Creates rules of the form "item,item,confidence,supPname" for a specified item and
     saves it into a csv-file. Uses the apriori-algorithm to calculate the rules.
-    :param saveRules:
+    :param saveRules: If true, a CSV-File will be created
     :param item:    The item the apriori-algorithm creates rules for.
                     Could be either track_uri, track_name, artist_uri or album_uri
     :param maxPid:  Number of playlists that limits the load of data. Can be used for faster testing
     :param minSup:  Minimum Support as total number of playlists that filters items out that didnt reach the minSup.
                     Standard value is 2, so that there is a rule for as many songs as possible
-    :param minConf: Likelihood of consequent that rates the rule given antecedent.
+    :param minConf: Likelihood of consequent by given antecedent, that rates the rule
                     If the rule A -> B has the confidence 0.5, it means that B appears in 50% of playlists
                     where A appears in. If the standard value of 0.2 is exceeded, there are least rules for items with
                     high support.
@@ -66,6 +66,7 @@ def aprioriSpotify(item, maxPid, minSup=2, minConf=0.2, kMax=2, b=10, p=10, dbL1
 def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2, saveRules=False):
     """
     Saves rules of the form "playlist-name (short pname),consequents,confidence,supPname" into a csv-file.
+    :param saveRules: If true, a CSV-File will be created
     :param consequents: The consequent of the rules of the form "pname -> consequent, confidence"
     :param maxPid:  Number of playlists that limits the load of data. Can be used for faster testing
     :param minSup:  Minimum Support as total number of playlists that filters pnames out that didnt reach the minSup.
@@ -96,7 +97,7 @@ def aprioriPname(consequents, maxPid, minSup=2, minConf=0.2, saveRules=False):
 
 def getNextItemSets(currItemSet2Pids, currPid2ItemSets, minSup, k, b, p):
     """"
-    Combines apriori_first.getAboveMinSup() and apriori_first.getUnion() and is also way faster for k = 2.
+    Combines apriori_first.getAboveMinSup() and apriori_first.getUnion() and is also way faster for.
     :param currItemSet2Pids:    This parameter is used to iterate over the playlists of a itemSet to
                                 concatenate it only with itemSets from playlists itself appears in.
                                 Due to an average occurrence of 10 playlists per track it reduces the number of
@@ -223,9 +224,10 @@ def getNextPid2ItemSets(currPid2ItemSets, nextItemSet2Pids):
 def associationRules(l1ItemSet2Pids, currItemSet2Pids, minConf):
     """
 
-    :param l1ItemSet2Pids:  The dictionary
-    :param currItemSet2Pids:
-    :param minConf:
+    :param l1ItemSet2Pids:  Dictionary to get the support of a l1item
+    :param currItemSet2Pids:    Dictionary of all items about which rules should be created
+    :param minConf: Likelihood of consequent by given antecedent, that rates the rule. Only rules above minConf will
+                    be saved.
     :return:    Rules of form [[frozenset({antecedents}), frozenset({consequents}), confidence, supAntecedent], ...]
     """
     rules = list()

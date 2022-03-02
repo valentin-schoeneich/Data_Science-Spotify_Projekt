@@ -13,10 +13,11 @@ for our data.
 def getAboveMinSup(candidateTrackSets, playlistSets, minSup, globalTrackSetWithSup):
     """
     This method filters the track-sets by his support.  The candidates are generated from getUnion()
-    :param candidateTrackSets: Set of track-frozensets with support above and under minSup
-    :param playlistSets:    List of sets. Each set represents a playlist with unique tracks
-    :param minSup:  Likelihood of a track being included in a playlist
-                    e.g. for minSup = 0.5 this function returns all tracks which are included in 50% of all playlists
+    :param candidateTrackSets:  Set of track-frozensets with support above and under minSup
+    :param playlistSets:        List of sets. Each set represents a playlist with unique tracks
+    :param minSup:              Likelihood of a track being included in a playlist
+                                e.g. for minSup = 0.5 this function returns all tracks which are included in
+                                50% of all playlists
     :param globalTrackSetWithSup: Dictionary that maps a track-set to his support
     :return: All track-sets above mindSup in form of the input parameter candidateTrackSets
     """
@@ -39,9 +40,9 @@ def getAboveMinSup(candidateTrackSets, playlistSets, minSup, globalTrackSetWithS
 def getUnion(trackSets, length):
     """
     This method was used by our first apriori-attempt. It is too slow for more than 10.000 tracks
-    and returns way too much candidates in first round from l1TrackSet to l2TrackSet.
+    and returns way too much candidates in first round from l1TrackSets to l2TrackSets.
     With length = 2 it returns len(trackSet) * (len(trackSet)-1) / 2 candidates.
-    :param trackSets:    A set of all frequent track-sets above minSup in form of {frozenset({'track_uri'}), ...}
+    :param trackSets:   A set of all frequent track-sets above minSup in form of {frozenset({'track_uri'}), ...}
     :param length:      The length that the union track-set should have
     :return:    Returns a set of sub-set's just like the parameter trackSet but with the new length for each sub-set
                 E.g trackSet = {A,B,C,D}, length = 2
@@ -56,7 +57,7 @@ def pruning(candidateSet, prevFreqSet, length):
         subsets = combinations(item, length)
         for subset in subsets:
             # if the subset is not in previous K-frequent get, then remove the set
-            if (frozenset(subset) not in prevFreqSet):
+            if frozenset(subset) not in prevFreqSet:
                 tempCandidateSet.remove(item)
                 break
     return tempCandidateSet
@@ -70,7 +71,7 @@ def associationRuleUnchanged(freqItemSet, itemSetWithSup, minConf):
             for s in subsets:
                 confidence = float(
                     itemSetWithSup[item] / itemSetWithSup[frozenset(s)])
-                if (confidence > minConf):
+                if confidence > minConf:
                     rules.append([set(s), set(item.difference(s)), confidence])
     return rules
 
@@ -92,7 +93,7 @@ def aprioriFromDB(maxPlaylists, minSup, minConf=0.5, kMax=2):
     Main method of this file.
     :param maxPlaylists: Defines the load of data requested from our database
     :param minSup:  Percentage of minimum playlists a track have to appear in, that he is used for rule-calculation
-    :param minConf: Likelihood of consequent given antecedent that rates the rule.
+    :param minConf: Likelihood of consequent by a given antecedent, that rates the rule.
                     If the rule A -> B has the confidence 0.5, it means that B appears in 50% of playlists
                     where A appears in.
     :param kMax:    Limits the iterations of this method by the size of the track-sets.

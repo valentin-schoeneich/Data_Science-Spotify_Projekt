@@ -8,9 +8,16 @@ submission = list()  # list with all prediction entries
 
 def getRuleDict(filename):
     """
-    Method to create a rule dictionary for a given file
+    Method to create a rule dictionary for a given file located in helperMethods.py.Path.pathToRules.value.
     :param filename:    CSV file with rules
-    :return         dictionary
+    :return         dictionary of the form:
+                    {'antecedent1': [[consequent1, confidence1], [consequent2, confidence2], ...],
+                     'antecedent2': [[consequent1, confidence1], [consequent2, confidence2], ...], ...}
+                   e.g.
+                   {'spotify:track:7zzLt6Z9y7jMvXnEg00n58': [[spotify:track:6ZT3coOj97F6CVvruPtnox, 0.7924528301886793],
+                                                            [spotify:track:5iyFrZpv5f4oWQCWMKfj52, 0.5660377358490566],
+                                                             ...],
+                    ...}
     """
     print(f"Load {filename}...", end='')
     df = readDF_from_CSV(filename, path=Path.pathToRules.value)  # create dataframe
@@ -24,9 +31,9 @@ def getRuleDict(filename):
 
 def getRuleDicts(item):
     """
-    Method to create rule dictionaires for name2item and item2item
+    Method to create rule dictionaries for name2item and item2item
     :param item:    artist, album or track
-    :return         two dictionaries
+    :return         Tuple of dictionaries of form (Please refer to getRuleDict()).
     """
     pname2item = getRuleDict(f"1000_name2{item}.csv")
     item2item = getRuleDict(f"1000_{item}2{item}.csv")
@@ -35,9 +42,11 @@ def getRuleDicts(item):
 
 def getMostPopular(filename):
     """
-    Method to find the most popular tracks from a artist or album
-    :param filename:    file with albums or aritst and their most successful songs
-    :return:            Union with a list and a dictionary
+    Method to find the most popular tracks from a artist, album, or over all
+    :param filename:    file with albums or artists and their most successful songs
+    :return:            Dictionary of the form {'album_uri': ['track_uri2', 'track_uri2', ...], ...}
+                        or if filename="mostPopularTracks.csv" a sorted list of all popular tracks:
+                        [track_uri1, track_uri2, ...]
     """
     print(f"Load {filename}...", end='')
     # creates dataframe from csv file
@@ -63,8 +72,8 @@ def tryPredict(ruleDict, key, givenTracks):
     """
     Method to find matching predictions for a given input value
     :param ruleDict:    dictionary to find matching predictions
-    :param key:         item used for prediction
-    :param givenTraks:  tracks who are in playlist
+    :param key:         item in form of an uri
+    :param givenTracks: tracks who are already in the given playlist
     :return:            dictionary with new predicitons
     """
     prediction = dict()
@@ -78,11 +87,11 @@ def tryPredict(ruleDict, key, givenTracks):
 def predForTrack(tracks, dictItem, itemName, givenTracks):
     """
     Method to predict new items for given tracks
-    :param tracks:        track with attributes
+    :param tracks:        tracks from a json-slice
     :param dictItem:      rule dictionary of the item
-    :param itemName:      item uri
-    :param givenTraks:    tracks uris
-    :return:            dirctionary with new predicitons
+    :param itemName:      could be either {'track_name', 'artist_uri', 'album_uri'}
+    :param givenTracks:   tracks who are already in the given playlist
+    :return:            dictionary with new predictions
     """
     predictions = dict()
     for track in tracks:
@@ -94,9 +103,9 @@ def predForTrack(tracks, dictItem, itemName, givenTracks):
 def predForItem(items, dictItem, givenTracks):
     """
     Method to predict new items
-    :param items:         items for prediction
+    :param items:         item of a dictionary
     :param dictItem:      rule dictionary of the item
-    :param givenTraks:    tracks uris
+    :param givenTracks:   tracks who are already in the given playlist
     :return:              dirctionary with new item predicitons
     """
     predictions = dict()
@@ -109,11 +118,11 @@ def predForItem(items, dictItem, givenTracks):
 def addPopular(trackPred, pred, popDict, maxTracks, givenTracks):
     """
     Method to add most popular songs from album or artist predictions to the track predictions:
-    :param trackPred:
-    :param pred:         album or artist predictions
+    :param trackPred:    Dictionary that should be extended
+    :param pred:         album or artist predictions in form of a dictionary
     :param popDict:      dictionary with album or artist to most popular songs
-    :param maxTracks:    maximum number of tracks that are still required
-    :param givenTracks:  tracks from playlist
+    :param maxTracks:    maximum number of tracks for each artist or album
+    :param givenTracks:  tracks who are already in the given playlist
     """
     for item in pred:
         i = 0
@@ -128,7 +137,7 @@ def recommendation():
     """
     Main method to predict 500 tracks for all playlists from challenge_set.json.
     :return:    No return value, but calling the saveAndSortPrediction method,
-                which creates a CSV submission file with predictions for all playlists.
+                which creates a CSV submission file with predictions for all 500 playlists.
     """
     # calling the getDataFromJson helper method, which creates a dataframe from the challenge_set.json file
     mpd_slice = getDataFromJson(filename="challenge_set.json", path=Path.pathToChallenge.value)
@@ -138,11 +147,11 @@ def recommendation():
     artist2mostPopular = getMostPopular("artist_uri2track_uris_sorted.csv")
     # variable with most popular tracks
     mostPopularTracks = getMostPopular("mostPopularTracks.csv")
-    # dictonaries for different attribute types
+    # dictionaries for different attribute types
     pname2track, track2track = getRuleDicts('track_uri')
     pname2artist, artist2artist = getRuleDicts('artist_uri')
     pname2album, album2album = getRuleDicts('album_uri')
-    # execution control variables
+    # variables for analysis
     incomplete = 0
     count = 0
     x1 = 0
@@ -156,7 +165,7 @@ def recommendation():
         # Creates dictionaries for the predictions
         trackPred, albumPred, artistPred = dict(), dict(), dict()
         tracks = playlist['tracks']
-        # Creates a set with all track from the playlist
+        # Creates a set with all tracks from the playlist
         givenTracks = set()
         for track in tracks:
             givenTracks.add(track['track_uri'])
@@ -207,7 +216,7 @@ def recommendation():
         count += 1
 
         # call method to save predictions
-        #saveAndSortPredictions(trackPred, count == 10000, playlist['pid'])
+        saveAndSortPredictions(trackPred, count == 10000, playlist['pid'])
 
     print(f'{incomplete} incomplete from {count}')
     print("Avg 1: ", statistics.mean(lenPredictions1))
@@ -234,7 +243,11 @@ def saveAndSortPredictions(trackPred, finish, pid):
         saveDF2CSV(df, 'submission.csv', path='../', header=False)
 
 
-def validateSzenarios():  # just to check the correct number of scenarios
+def validateSzenarios():
+    """
+    just to check the correct number of scenarios
+    :return Nothung, print only
+    """
     szenarios = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, -1: 0}
     mpd_slice = getDataFromJson(filename="challenge_set.json", path='../')
     for playlist in mpd_slice["playlists"]:
@@ -274,3 +287,4 @@ def checkSzenario(playlist):
 
 
 recommendation()
+

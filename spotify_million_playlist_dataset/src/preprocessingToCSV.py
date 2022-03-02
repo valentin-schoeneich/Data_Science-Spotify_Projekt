@@ -29,14 +29,15 @@ def csvForDb(maxFiles):
     createIndexForCSV(f'pConT_{maxFiles}')
 
 
-def csvItem2Values(maxFiles, keys, values='pid', minSup=1):
+def csvItem2Values(maxFiles, keys, values, minSup=1):
     """
     Creates csv-files from json-files that can be used as a dictionary for our apriori-algorithm.
     :param minSup:  Total number of playlists, the item must appear in. All entry's with len(values) < minSup will be
-                    filtered. Could be used to save memory. By default = 1, so the csv-file can be used for many cases.
-    :param maxFiles: Number of files that should be converted to csv
+                    filtered. Could be used to save ROM. By default = 1, so the csv-file can be used for many cases.
+    :param maxFiles: Number of json-files that should be converted to csv
     :param keys:    Can be one or more items defined in helperMethods.validItems. For each of that item(s) a csv-file
-                    will be created. By default = {'track_name', 'track_uri', 'artist_uri', 'album_uri', 'name'}, in
+                    will be created.
+                    E.g. keys = {'track_name', 'track_uri', 'artist_uri', 'album_uri', 'name'}, in
                     this case 5 files will be created.
     :param values:  Can be one or more items. For each value a csv-file will be created.
                     E.g len(keys) = 2, len(values) = 2 -> will generate 4 files
@@ -137,7 +138,7 @@ def savePopularTracks(maxFiles):
 
 def createFiles():
     """
-    Creates the most important csv-files for our current level of knowledge.
+    Creates csv-files for recommendation.
     :return: Nothing, only calls methods
     """
     # For testing
@@ -147,7 +148,7 @@ def createFiles():
     # For final prediction / rule-calculation
     csvItem2Values(maxFiles=1000, keys={'track_uri', 'album_uri', 'artist_uri'}, values='pid', minSup=1)
     csvItem2Values(maxFiles=1000, keys='name', values={'track_uri', 'album_uri', 'artist_uri', 'pid'}, minSup=1)
-    csvItem2Values(maxFiles=1000, keys={'album_uri', 'artist_uri'},  values='track_uri', minSup=1)
+    csvItem2Values(maxFiles=1000, keys={'album_uri', 'artist_uri'}, values='track_uri', minSup=1)
     savePopularTracks(1000)
 
 
@@ -186,4 +187,3 @@ def csvPid2ItemsFromCSV(maxFiles, items):
         df_pid2Items['items'] = pid2Items.values()
         saveDF2CSV(df_pid2Items, f'pid2{item}s_{maxFiles}.csv')
 '''
-

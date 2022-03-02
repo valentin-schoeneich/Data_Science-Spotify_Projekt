@@ -25,6 +25,7 @@ Zudem müssen zum Ausführen mancher Methoden zuvor bestimmte CSV-Dateien erstel
   * Ansätze
   * Umsetzung
   * Methoden  
+* Resümee  
 * Mitwirken der Teammitglieder
 * References
 
@@ -995,7 +996,46 @@ Submission-Liste. Beim letzten Durchlauf wird eine CSV-Datei mit allen Ergebniss
 erstellt. Die CSV-Datei ist nach den Vorgaben von AIcrowd formatiert.
 - `checkSzenario()`  
 Diese Methode nutzen wir zum Überprüfen in welchem Szenario sich eine Playlist befindet.
-  
+ 
+## Resümee
+Wie gut die Regeln und damit auch die recommendation ist, hängt stark von dem support der einzelnen items ab.
+Z.B. sind Regeln über Playlists ziemlich gut geworden. Bei diesen ist der Anteil der Playlist-Namen mit geringem support
+auch deutlich geringer als z.B. bei den Tracks (s. Absatz Analyse des Datensatzes). 
+Beispiel:
+
+Die Top 3 Regeln für chill:
+
+    chill,spotify:track:152lZdxL1OR0ZMW6KquMif,0.1048,10000
+    chill,spotify:track:3kxfsdsCpFgN412fpnW85Y,0.0853,10000
+    chill,spotify:track:7yq4Qj7cqayVTp3FF9CWbm,0.082,10000
+
+
+Die Top 3 Regeln für country:
+
+    country,spotify:track:5kNe7PE09d6Kvw5pAsx23n,0.3725,10000
+    country,spotify:track:03fT3OHB9KyMtGMt2zwqCT,0.3695,10000
+    country,spotify:track:4dGJf1SER1T6ooX46vwzRB,0.3549,10000
+
+Um genug Regeln von Tracks zu Tracks zu erstellen, haben wir den `minSup=2` gesetzt. Dementsprechend gibt es hier viele nicht so aussagekräftige Regeln:
+
+    spotify:track:6e4Mc1DFM8Ii6zl30oTItX,spotify:track:5iAfLe0T0yRIYbL2v58Mzv,1.0,2
+    spotify:track:6e1ysAJuTuxvQADyLRWcMx,spotify:track:0RStNppCmRjvKW5MGfnsYG,1.0,2
+    spotify:track:4HN5mnyKtVylZL1uX7Lj96,spotify:track:0xxMOLz3SsUIE9CBUFY1NZ,1.0,4
+
+Für populärere Lieder sind auch die Regeln Track zu Track gut:
+
+Eye of the Tiger -> Livin On a Prayer:
+
+    spotify:track:2HHtWyy5CgaQbC7XSoOb0e,spotify:track:0J6mQxEZnlRt9ymzFntA6z,0.3529457973291438,12730
+
+oder 
+
+The Real Slim Shady -> Lose Yourself
+
+    spotify:track:3yfqSUWxFvZELEM4PmlwIR,spotify:track:7w9bgPAmPTtrkt2v16QWvQ,0.3867282450170151,12342
+
+
+Das Ergebnis der recommendation kann im AIcrown-Leaderboard [5] unter dem Teamnamen "ViLoVa" eingesehen werden.
 
 ## Mitwirken der Teammitglieder
 * **DB-Schema** -               Valentin, Vincent, Louis
@@ -1012,7 +1052,8 @@ Diese Methode nutzen wir zum Überprüfen in welchem Szenario sich eine Playlist
 [1] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/apriori/  
 [2] http://rasbt.github.io/mlxtend/user_guide/frequent_patterns/association_rules/  
 [3] https://github.com/chonyy/apriori_python  
-[4] Foliensatz "Recommender Systeme" S. 29 - Erweiterung Apriori-TID)
+[4] Foliensatz "Recommender Systeme" S. 29 - Erweiterung Apriori-TID)  
+[5] https://www.aicrowd.com/challenges/spotify-million-playlist-dataset-challenge/leaderboards
 
 
 
